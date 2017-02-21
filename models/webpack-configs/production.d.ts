@@ -2,5 +2,5 @@
 import * as webpack from 'webpack';
 import { WebpackConfigOptions } from '../webpack-config';
 export declare const getProdConfig: (wco: WebpackConfigOptions) => {
-    plugins: webpack.Plugin[];
+    plugins: webpack.DefinePlugin[];
 };
