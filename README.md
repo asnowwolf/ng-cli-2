@@ -3,7 +3,7 @@
 这是官方Angular CLI版本(<https://github.com/angular/angular-cli>)的一个定制版，主要有如下改动：
 
 1. 支持把HTML/CSS中内嵌的图片编译在项目中，小文件会被内联为Base64。
-2. 支持把HTML中通过<img src="./path/to/file.svg">引入的图片就地展开，以便让css应用于svg元素。
+2. 支持把HTML中通过`<img src="./path/to/file.svg">`引入的图片就地展开，以便让css应用于svg元素。
 3. 支持组件样式（Component Styles）文件的source mapping，使其可以正常调试。但需要等我的一个PR <https://github.com/angular/angular/pull/14175> 被接受之后才能生效，在此之前，请手动合并这些修改来试验效果。
 
 # 如何使用？
