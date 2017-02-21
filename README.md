@@ -10,6 +10,6 @@
 
 1. 卸载官方原有cli：`npm r -g angular-cli`和`npm r -g @angular/cli`（新版包名）
 2. 建议使用Node 6.x的最新版作为运行环境
-3. 安装本工程`npm i -g https://github.com/asnowwolf/ng-cli-2.git#v1.0.0-beta.30`，安装完成后，将提供一个全局的ng命令
+3. 安装本工程`npm i -g https://github.com/asnowwolf/ng-cli-2.git#v1.0.0-beta.30-2`，安装完成后，将提供一个全局的ng命令
 4. 之后的用法和官方cli完全相同，参见 <https://github.com/angular/angular-cli/blob/master/README.md>
 
