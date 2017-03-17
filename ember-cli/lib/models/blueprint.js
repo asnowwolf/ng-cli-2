@@ -10,7 +10,6 @@ var printableProperties = require('../utilities/printable-properties').blueprint
 var sequence            = require('../utilities/sequence');
 var printCommand        = require('../utilities/print-command');
 var fs                  = require('fs-extra');
-var existsSync          = require('exists-sync');
 var inflector           = require('inflection');
 var minimatch           = require('minimatch');
 var path                = require('path');
@@ -34,6 +33,16 @@ var CoreObject          = require('../ext/core-object');
 var EOL                 = require('os').EOL;
 var debug               = require('debug')('ember-cli:blueprint');
 var normalizeEntityName = require('ember-cli-normalize-entity-name');
+
+function existsSync(path) {
+  try {
+    fs.accessSync(path);
+    return true;
+  }
+  catch (e) {
+    return false;
+  }
+}
 
 module.exports = Blueprint;
 
@@ -490,11 +499,9 @@ Blueprint.prototype.install = function(options) {
   var ui       = this.ui     = options.ui;
   var dryRun   = this.dryRun = options.dryRun;
   this.project = options.project;
-  this.pod     = options.pod;
+  this.pod     = false;
   this.options = options;
   this.hasPathToken = hasPathToken(this.files());
-
-  podDeprecations(this.project.config(), ui);
 
   ui.writeLine('installing ' + this.name);
 
@@ -527,11 +534,9 @@ Blueprint.prototype.uninstall = function(options) {
   var ui       = this.ui     = options.ui;
   var dryRun   = this.dryRun = options.dryRun;
   this.project = options.project;
-  this.pod     = options.pod;
+  this.pod     = false;
   this.options = options;
   this.hasPathToken = hasPathToken(this.files());
-
-  podDeprecations(this.project.config(), ui);
 
   ui.writeLine('uninstalling ' + this.name);
 
@@ -1100,7 +1105,7 @@ Blueprint.prototype.insertIntoFile = function(pathRelativeToProjectRoot, content
 Blueprint.prototype._printCommand = printCommand;
 
 Blueprint.prototype.printBasicHelp = function(verbose) {
-  var initialMargin = '      ';
+  var initialMargin = '    ';
   var output = initialMargin;
   if (this.overridden) {
     output += chalk.grey('(overridden) ' + this.name);
@@ -1276,7 +1281,8 @@ Blueprint.list = function(options) {
   @property renameFiles
 */
 Blueprint.renamedFiles = {
-  'gitignore': '.gitignore'
+  'gitignore': '.gitignore',
+  'angular-cli.json': '.angular-cli.json'
 };
 
 /**
@@ -1408,20 +1414,6 @@ function hasPathToken(files) {
 function inRepoAddonExists(name, root) {
   var addonPath = path.join(root, 'lib', name);
   return existsSync(addonPath);
-}
-
-function podDeprecations(config, ui) {
-  /*
-  var podModulePrefix = config.podModulePrefix || '';
-  var podPath = podModulePrefix.substr(podModulePrefix.lastIndexOf('/') + 1);
-  // Disabled until we are ready to deprecate podModulePrefix
-  deprecateUI(ui)('`podModulePrefix` is deprecated and will be removed from future versions of ember-cli.'+
-    ' Please move existing pods from \'app/' + podPath + '/\' to \'app/\'.', config.podModulePrefix);
-  */
-  if (config.usePodsByDefault) {
-    ui.writeDeprecateLine('`usePodsByDefault` is no longer supported in \'config/environment.js\',' +
-      ' use `usePods` in \'.ember-cli\' instead.');
-  }
 }
 
 /**

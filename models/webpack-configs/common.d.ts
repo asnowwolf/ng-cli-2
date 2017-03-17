@@ -1,3 +1,4 @@
+import * as webpack from 'webpack';
 import { WebpackConfigOptions } from '../webpack-config';
 /**
  * Enumerate loaders and their dependencies from this file to let the dependency validator
@@ -27,7 +28,6 @@ export declare function getCommonConfig(wco: WebpackConfigOptions): {
         path: string;
         publicPath: string;
         filename: string;
-        sourceMapFilename: string;
         chunkFilename: string;
     };
     module: {
@@ -44,7 +44,7 @@ export declare function getCommonConfig(wco: WebpackConfigOptions): {
             loaders: string[];
         })[];
     };
-    plugins: any[];
+    plugins: webpack.NoEmitOnErrorsPlugin[];
     node: {
         fs: string;
         global: boolean;

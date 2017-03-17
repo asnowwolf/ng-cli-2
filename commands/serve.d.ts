@@ -1,18 +1,16 @@
-import { BuildOptions } from '../models/webpack-config';
+import { BuildOptions } from '../models/build-options';
 export interface ServeTaskOptions extends BuildOptions {
     port?: number;
     host?: string;
     proxyConfig?: string;
     liveReload?: boolean;
-    liveReloadHost?: string;
-    liveReloadPort?: number;
-    liveReloadBaseUrl?: string;
-    liveReloadLiveCss?: boolean;
+    liveReloadClient?: string;
     ssl?: boolean;
     sslKey?: string;
     sslCert?: string;
     open?: boolean;
     hmr?: boolean;
 }
+export declare const baseServeCommandOptions: any;
 declare const ServeCommand: any;
 export default ServeCommand;

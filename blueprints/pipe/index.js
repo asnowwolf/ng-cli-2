@@ -1,29 +1,62 @@
 "use strict";
-var path = require('path');
-var fs = require('fs');
-var chalk = require('chalk');
-var dynamicPathParser = require('../../utilities/dynamic-path-parser');
-var stringUtils = require('ember-cli-string-utils');
-var astUtils = require('../../utilities/ast-utils');
-var findParentModule = require('../../utilities/find-parent-module').default;
-var NodeHost = require('@angular-cli/ast-tools').NodeHost;
-var Blueprint = require('../../ember-cli/lib/models/blueprint');
-var getFiles = Blueprint.prototype.files;
 Object.defineProperty(exports, "__esModule", { value: true });
+const ast_tools_1 = require("../../lib/ast-tools");
+const config_1 = require("../../models/config");
+const app_utils_1 = require("../../utilities/app-utils");
+const path = require('path');
+const fs = require('fs');
+const chalk = require('chalk');
+const dynamicPathParser = require('../../utilities/dynamic-path-parser');
+const stringUtils = require('ember-cli-string-utils');
+const astUtils = require('../../utilities/ast-utils');
+const findParentModule = require('../../utilities/find-parent-module').default;
+const Blueprint = require('../../ember-cli/lib/models/blueprint');
+const getFiles = Blueprint.prototype.files;
 exports.default = Blueprint.extend({
     description: '',
+    aliases: ['p'],
     availableOptions: [
-        { name: 'flat', type: Boolean, default: true },
-        { name: 'spec', type: Boolean },
-        { name: 'skip-import', type: Boolean, default: false },
-        { name: 'module', type: String, aliases: ['m'] },
-        { name: 'export', type: Boolean, default: false }
+        {
+            name: 'flat',
+            type: Boolean,
+            description: 'Flag to indicate if a dir is created.'
+        },
+        {
+            name: 'spec',
+            type: Boolean,
+            description: 'Specifies if a spec file is generated.'
+        },
+        {
+            name: 'skip-import',
+            type: Boolean,
+            default: false,
+            description: 'Allows for skipping the module import.'
+        },
+        {
+            name: 'module',
+            type: String,
+            aliases: ['m'],
+            description: 'Allows specification of the declaring module.'
+        },
+        {
+            name: 'export',
+            type: Boolean,
+            default: false,
+            description: 'Specifies if declaring module exports the pipe.'
+        },
+        {
+            name: 'app',
+            type: String,
+            aliases: ['a'],
+            description: 'Specifies app name to use.'
+        }
     ],
     beforeInstall: function (options) {
+        const appConfig = app_utils_1.getAppFromConfig(this.options.app);
         if (options.module) {
             // Resolve path to module
-            var modulePath = options.module.endsWith('.ts') ? options.module : options.module + ".ts";
-            var parsedPath = dynamicPathParser(this.project, modulePath);
+            const modulePath = options.module.endsWith('.ts') ? options.module : `${options.module}.ts`;
+            const parsedPath = dynamicPathParser(this.project, modulePath, appConfig);
             this.pathToModule = path.join(this.project.root, parsedPath.dir, parsedPath.base);
             if (!fs.existsSync(this.pathToModule)) {
                 throw 'Module specified does not exist';
@@ -31,69 +64,70 @@ exports.default = Blueprint.extend({
         }
         else {
             try {
-                this.pathToModule = findParentModule(this.project, this.dynamicPath.dir);
+                this.pathToModule = findParentModule(this.project.root, appConfig.root, this.generatePath);
             }
             catch (e) {
                 if (!options.skipImport) {
-                    throw "Error locating module for declaration\n\t" + e;
+                    throw `Error locating module for declaration\n\t${e}`;
                 }
             }
         }
     },
     normalizeEntityName: function (entityName) {
-        var parsedPath = dynamicPathParser(this.project, entityName);
+        const appConfig = app_utils_1.getAppFromConfig(this.options.app);
+        const parsedPath = dynamicPathParser(this.project, entityName, appConfig);
         this.dynamicPath = parsedPath;
         return parsedPath.name;
     },
     locals: function (options) {
+        options.flat = options.flat !== undefined ?
+            options.flat : config_1.CliConfig.getValue('defaults.pipe.flat');
         options.spec = options.spec !== undefined ?
-            options.spec :
-            this.project.ngConfigObj.get('defaults.spec.pipe');
+            options.spec : config_1.CliConfig.getValue('defaults.pipe.spec');
         return {
             dynamicPath: this.dynamicPath.dir,
             flat: options.flat
         };
     },
     files: function () {
-        var fileList = getFiles.call(this);
+        let fileList = getFiles.call(this);
         if (this.options && !this.options.spec) {
-            fileList = fileList.filter(function (p) { return p.indexOf('__name__.pipe.spec.ts') < 0; });
+            fileList = fileList.filter(p => p.indexOf('__name__.pipe.spec.ts') < 0);
         }
         return fileList;
     },
     fileMapTokens: function (options) {
-        var _this = this;
         // Return custom template variables here.
         return {
-            __path__: function () {
-                var dir = _this.dynamicPath.dir;
+            __path__: () => {
+                let dir = this.dynamicPath.dir;
                 if (!options.locals.flat) {
                     dir += path.sep + options.dasherizedModuleName;
                 }
-                _this.generatePath = dir;
+                this.generatePath = dir;
                 return dir;
             }
         };
     },
     afterInstall: function (options) {
-        var _this = this;
-        if (options.dryRun) {
-            return;
-        }
-        var returns = [];
-        var className = stringUtils.classify(options.entity.name + "Pipe");
-        var fileName = stringUtils.dasherize(options.entity.name + ".pipe");
-        var fullGeneratePath = path.join(this.project.root, this.generatePath);
-        var moduleDir = path.parse(this.pathToModule).dir;
-        var relativeDir = path.relative(moduleDir, fullGeneratePath);
-        var importPath = relativeDir ? "./" + relativeDir + "/" + fileName : "./" + fileName;
+        const returns = [];
+        const className = stringUtils.classify(`${options.entity.name}Pipe`);
+        const fileName = stringUtils.dasherize(`${options.entity.name}.pipe`);
+        const fullGeneratePath = path.join(this.project.root, this.generatePath);
+        const moduleDir = path.parse(this.pathToModule).dir;
+        const relativeDir = path.relative(moduleDir, fullGeneratePath);
+        const importPath = relativeDir ? `./${relativeDir}/${fileName}` : `./${fileName}`;
         if (!options.skipImport) {
+            if (options.dryRun) {
+                this._writeStatusToUI(chalk.yellow, 'update', path.relative(this.project.root, this.pathToModule));
+                return;
+            }
             returns.push(astUtils.addDeclarationToModule(this.pathToModule, className, importPath)
-                .then(function (change) { return change.apply(NodeHost); })
-                .then(function (result) {
+                .then((change) => change.apply(ast_tools_1.NodeHost))
+                .then((result) => {
                 if (options.export) {
-                    return astUtils.addExportToModule(_this.pathToModule, className, importPath)
-                        .then(function (change) { return change.apply(NodeHost); });
+                    return astUtils.addExportToModule(this.pathToModule, className, importPath)
+                        .then((change) => change.apply(ast_tools_1.NodeHost));
                 }
                 return result;
             }));
@@ -102,4 +136,4 @@ exports.default = Blueprint.extend({
         return Promise.all(returns);
     }
 });
-//# sourceMappingURL=/Users/twer/dev/sdk/angular-cli/packages/@angular/cli/blueprints/pipe/index.js.map
+//# sourceMappingURL=/users/twer/private/gde/angular-cli/blueprints/pipe/index.js.map

@@ -1,4 +1,3 @@
-/// <reference types="semver" />
 import { SemVer } from 'semver';
 export declare class Version {
     private _version;

@@ -1,9 +1,10 @@
 "use strict";
-var path = require('path');
-exports.ngAppResolve = function (resolvePath) {
+Object.defineProperty(exports, "__esModule", { value: true });
+const path = require("path");
+exports.ngAppResolve = (resolvePath) => {
     return path.resolve(process.cwd(), resolvePath);
 };
-var webpackOutputOptions = {
+const webpackOutputOptions = {
     colors: true,
     hash: true,
     timings: true,
@@ -16,15 +17,14 @@ var webpackOutputOptions = {
     assets: false,
     version: false
 };
-var verboseWebpackOutputOptions = {
+const verboseWebpackOutputOptions = {
     children: true,
     assets: true,
     version: true,
     reasons: true,
     chunkModules: false // TODO: set to true when console to file output is fixed
 };
-function getWebpackStatsConfig(verbose) {
-    if (verbose === void 0) { verbose = false; }
+function getWebpackStatsConfig(verbose = false) {
     return verbose
         ? Object.assign(webpackOutputOptions, verboseWebpackOutputOptions)
         : webpackOutputOptions;
@@ -33,17 +33,15 @@ exports.getWebpackStatsConfig = getWebpackStatsConfig;
 // Filter extra entries out of a arran of extraEntries
 function lazyChunksFilter(extraEntries) {
     return extraEntries
-        .filter(function (extraEntry) { return extraEntry.lazy; })
-        .map(function (extraEntry) { return extraEntry.entry; });
+        .filter(extraEntry => extraEntry.lazy)
+        .map(extraEntry => extraEntry.entry);
 }
 exports.lazyChunksFilter = lazyChunksFilter;
 // convert all extra entries into the object representation, fill in defaults
 function extraEntryParser(extraEntries, appRoot, defaultEntry) {
     return extraEntries
-        .map(function (extraEntry) {
-        return typeof extraEntry === 'string' ? { input: extraEntry } : extraEntry;
-    })
-        .map(function (extraEntry) {
+        .map((extraEntry) => typeof extraEntry === 'string' ? { input: extraEntry } : extraEntry)
+        .map((extraEntry) => {
         extraEntry.path = path.resolve(appRoot, extraEntry.input);
         if (extraEntry.output) {
             extraEntry.entry = extraEntry.output.replace(/\.(js|css)$/i, '');
@@ -58,17 +56,16 @@ function extraEntryParser(extraEntries, appRoot, defaultEntry) {
     });
 }
 exports.extraEntryParser = extraEntryParser;
-function getOutputHashFormat(option, length) {
-    if (length === void 0) { length = 20; }
+function getOutputHashFormat(option, length = 20) {
     /* tslint:disable:max-line-length */
-    var hashFormats = {
-        none: { chunk: '', extract: '', file: '' },
-        media: { chunk: '', extract: '', file: ".[hash:" + length + "]" },
-        bundles: { chunk: ".[chunkhash:" + length + "]", extract: ".[contenthash:" + length + "]", file: '' },
-        all: { chunk: ".[chunkhash:" + length + "]", extract: ".[contenthash:" + length + "]", file: ".[hash:" + length + "]" },
+    const hashFormats = {
+        none: { chunk: '', extract: '', file: `.[hash:${length}]` },
+        media: { chunk: '', extract: '', file: `.[hash:${length}]` },
+        bundles: { chunk: `.[chunkhash:${length}]`, extract: `.[contenthash:${length}]`, file: `.[hash:${length}]` },
+        all: { chunk: `.[chunkhash:${length}]`, extract: `.[contenthash:${length}]`, file: `.[hash:${length}]` },
     };
     /* tslint:enable:max-line-length */
     return hashFormats[option] || hashFormats['none'];
 }
 exports.getOutputHashFormat = getOutputHashFormat;
-//# sourceMappingURL=/Users/twer/dev/sdk/angular-cli/packages/@angular/cli/models/webpack-configs/utils.js.map
+//# sourceMappingURL=/users/twer/private/gde/angular-cli/models/webpack-configs/utils.js.map

@@ -1,20 +1,4 @@
-export interface BuildOptions {
-    target?: string;
-    environment?: string;
-    outputPath?: string;
-    aot?: boolean;
-    sourcemap?: boolean;
-    vendorChunk?: boolean;
-    baseHref?: string;
-    deployUrl?: string;
-    verbose?: boolean;
-    progress?: boolean;
-    i18nFile?: string;
-    i18nFormat?: string;
-    locale?: string;
-    extractCss?: boolean;
-    outputHashing?: string;
-}
+import { BuildOptions } from './build-options';
 export interface WebpackConfigOptions {
     projectRoot: string;
     buildOptions: BuildOptions;
@@ -22,10 +6,15 @@ export interface WebpackConfigOptions {
 }
 export declare class NgCliWebpackConfig {
     config: any;
-    constructor(buildOptions: BuildOptions);
+    wco: WebpackConfigOptions;
+    constructor(buildOptions: BuildOptions, appConfig: any);
+    buildConfig(): any;
     getTargetConfig(webpackConfigOptions: WebpackConfigOptions): any;
-    private validateBuildOptions(buildOptions);
-    private addTargetDefaults(buildOptions);
-    private mergeConfigs(buildOptions, appConfig);
-    private addAppConfigDefaults(appConfig);
+    validateBuildOptions(buildOptions: BuildOptions): void;
+    addTargetDefaults(buildOptions: BuildOptions): any;
+    mergeConfigs(buildOptions: BuildOptions, appConfig: any): {} & {
+        outputPath: any;
+        deployUrl: any;
+    } & BuildOptions;
+    addAppConfigDefaults(appConfig: any): any;
 }

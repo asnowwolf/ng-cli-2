@@ -1,5 +1,6 @@
 "use strict";
-exports.getDevConfig = function (wco) {
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getDevConfig = function (_wco) {
     return {};
 };
-//# sourceMappingURL=/Users/twer/dev/sdk/angular-cli/packages/@angular/cli/models/webpack-configs/development.js.map
+//# sourceMappingURL=/users/twer/private/gde/angular-cli/models/webpack-configs/development.js.map

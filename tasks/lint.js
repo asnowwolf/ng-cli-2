@@ -1,48 +1,94 @@
 "use strict";
-var Task = require('../ember-cli/lib/models/task');
-var chalk = require('chalk');
-var require_project_module_1 = require('../utilities/require-project-module');
-var config_1 = require('../models/config');
-var common_tags_1 = require('common-tags');
 Object.defineProperty(exports, "__esModule", { value: true });
+const Task = require('../ember-cli/lib/models/task');
+const chalk = require("chalk");
+const glob = require("glob");
+const require_project_module_1 = require("../utilities/require-project-module");
+const config_1 = require("../models/config");
+const common_tags_1 = require("common-tags");
 exports.default = Task.extend({
     run: function (commandOptions) {
-        var ui = this.ui;
-        var projectRoot = this.project.root;
-        return new Promise(function (resolve, reject) {
-            var tslint = require_project_module_1.requireDependency(projectRoot, 'tslint');
-            var Linter = tslint.Linter;
-            var Configuration = tslint.Configuration;
-            var lintConfigs = config_1.CliConfig.fromProject().config.lint || [];
-            if (lintConfigs.length === 0) {
-                ui.writeLine(chalk.yellow((_a = ["\n          No lint config(s) found.\n          If this is not intended, run \"ng update\".\n        "], _a.raw = ["\n          No lint config(s) found.\n          If this is not intended, run \"ng update\".\n        "], common_tags_1.oneLine(_a))));
-                return resolve(0);
-            }
-            var errors = 0;
-            lintConfigs.forEach(function (config) {
-                var program = Linter.createProgram(config.project);
-                var files = Linter.getFileNames(program);
-                var linter = new Linter({
-                    fix: commandOptions.fix,
-                    formatter: commandOptions.format
-                }, program);
-                files.forEach(function (file) {
-                    var fileContents = program.getSourceFile(file).getFullText();
-                    var configLoad = Configuration.findConfiguration(config.tslintConfig, file);
-                    linter.lint(file, fileContents, configLoad.results);
-                });
-                var result = linter.getResult();
-                errors += result.failureCount;
-                ui.writeLine(result.output.trim().concat('\n'));
+        const ui = this.ui;
+        const projectRoot = this.project.root;
+        const lintConfigs = config_1.CliConfig.fromProject().config.lint || [];
+        if (lintConfigs.length === 0) {
+            ui.writeLine(chalk.yellow(common_tags_1.oneLine `
+        No lint config(s) found.
+        If this is not intended, run "ng update".
+      `));
+            return Promise.resolve(0);
+        }
+        const tslint = require_project_module_1.requireProjectModule(projectRoot, 'tslint');
+        const Linter = tslint.Linter;
+        const Configuration = tslint.Configuration;
+        const result = lintConfigs
+            .map((config) => {
+            const program = Linter.createProgram(config.project);
+            const files = getFilesToLint(program, config, Linter);
+            const linter = new Linter({
+                fix: commandOptions.fix,
+                formatter: commandOptions.format
+            }, program);
+            files.forEach((file) => {
+                const sourceFile = program.getSourceFile(file);
+                if (!sourceFile) {
+                    return;
+                }
+                const fileContents = sourceFile.getFullText();
+                const configLoad = Configuration.findConfiguration(config.tslintConfig, file);
+                linter.lint(file, fileContents, configLoad.results);
             });
-            if (errors > 0) {
-                ui.writeLine(chalk.red('Lint errors found in the listed files.'));
-                return commandOptions.force ? resolve(0) : resolve(2);
+            return linter.getResult();
+        })
+            .reduce((total, current) => {
+            const failures = current.failures
+                .filter((cf) => !total.failures.some((ef) => ef.equals(cf)));
+            total.failures = total.failures.concat(...failures);
+            if (current.fixes) {
+                total.fixes = (total.fixes || []).concat(...current.fixes);
             }
-            ui.writeLine(chalk.green('All files pass linting.'));
-            return resolve(0);
-            var _a;
+            return total;
+        }, {
+            failures: [],
+            fixes: undefined
         });
+        const Formatter = tslint.findFormatter(commandOptions.format);
+        const formatter = new Formatter();
+        const output = formatter.format(result.failures, result.fixes);
+        if (output) {
+            ui.writeLine(output);
+        }
+        // print formatter output directly for non human-readable formats
+        if (['prose', 'verbose', 'stylish'].indexOf(commandOptions.format) == -1) {
+            return (result.failures.length == 0 || commandOptions.force)
+                ? Promise.resolve(0) : Promise.resolve(2);
+        }
+        if (result.failures.length > 0) {
+            ui.writeLine(chalk.red('Lint errors found in the listed files.'));
+            return commandOptions.force ? Promise.resolve(0) : Promise.resolve(2);
+        }
+        ui.writeLine(chalk.green('All files pass linting.'));
+        return Promise.resolve(0);
     }
 });
-//# sourceMappingURL=/Users/twer/dev/sdk/angular-cli/packages/@angular/cli/tasks/lint.js.map
+function getFilesToLint(program, lintConfig, Linter) {
+    let files = [];
+    if (lintConfig.files !== null) {
+        files = Array.isArray(lintConfig.files) ? lintConfig.files : [lintConfig.files];
+    }
+    else {
+        files = Linter.getFileNames(program);
+    }
+    let globOptions = {};
+    if (lintConfig.exclude !== null) {
+        const excludePatterns = Array.isArray(lintConfig.exclude)
+            ? lintConfig.exclude
+            : [lintConfig.exclude];
+        globOptions = { ignore: excludePatterns, nodir: true };
+    }
+    files = files
+        .map((file) => glob.sync(file, globOptions))
+        .reduce((a, b) => a.concat(b), []);
+    return files;
+}
+//# sourceMappingURL=/users/twer/private/gde/angular-cli/tasks/lint.js.map

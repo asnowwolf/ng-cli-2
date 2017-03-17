@@ -1,72 +1,108 @@
 "use strict";
-var build_1 = require('./build');
-var config_1 = require('../models/config');
-var PortFinder = require('portfinder');
-var Command = require('../ember-cli/lib/models/command');
-var config = config_1.CliConfig.fromProject() || config_1.CliConfig.fromGlobal();
-PortFinder.basePort = 49152;
-var defaultPort = process.env.PORT || config.get('defaults.serve.port');
-var defaultHost = config.get('defaults.serve.host');
-var ServeCommand = Command.extend({
+Object.defineProperty(exports, "__esModule", { value: true });
+const build_1 = require("./build");
+const config_1 = require("../models/config");
+const version_1 = require("../upgrade/version");
+const check_port_1 = require("../utilities/check-port");
+const override_options_1 = require("../utilities/override-options");
+const Command = require('../ember-cli/lib/models/command');
+const config = config_1.CliConfig.fromProject() || config_1.CliConfig.fromGlobal();
+const defaultPort = process.env.PORT || config.get('defaults.serve.port');
+const defaultHost = config.get('defaults.serve.host');
+const defaultSsl = config.get('defaults.serve.ssl');
+const defaultSslKey = config.get('defaults.serve.sslKey');
+const defaultSslCert = config.get('defaults.serve.sslCert');
+// Expose options unrelated to live-reload to other commands that need to run serve
+exports.baseServeCommandOptions = override_options_1.overrideOptions([
+    ...build_1.baseBuildCommandOptions,
+    {
+        name: 'port',
+        type: Number,
+        default: defaultPort,
+        aliases: ['p'],
+        description: 'Port to listen to for serving.'
+    },
+    {
+        name: 'host',
+        type: String,
+        default: defaultHost,
+        aliases: ['H'],
+        description: `Listens only on ${defaultHost} by default.`
+    },
+    {
+        name: 'proxy-config',
+        type: 'Path',
+        aliases: ['pc'],
+        description: 'Proxy configuration file.'
+    },
+    {
+        name: 'ssl',
+        type: Boolean,
+        default: defaultSsl,
+        description: 'Serve using HTTPS.'
+    },
+    {
+        name: 'ssl-key',
+        type: String,
+        default: defaultSslKey,
+        description: 'SSL key to use for serving HTTPS.'
+    },
+    {
+        name: 'ssl-cert',
+        type: String,
+        default: defaultSslCert,
+        description: 'SSL certificate to use for serving HTTPS.'
+    },
+    {
+        name: 'open',
+        type: Boolean,
+        default: false,
+        aliases: ['o'],
+        description: 'Opens the url in default browser.',
+    },
+    {
+        name: 'live-reload',
+        type: Boolean,
+        default: true,
+        aliases: ['lr'],
+        description: 'Whether to reload the page on change, using live-reload.'
+    },
+    {
+        name: 'live-reload-client',
+        type: String,
+        description: 'Specify the URL that the live reload browser client will use.'
+    },
+    {
+        name: 'hmr',
+        type: Boolean,
+        default: false,
+        description: 'Enable hot module replacement.',
+    }
+], [
+    {
+        name: 'watch',
+        default: true,
+        description: 'Rebuild on change.'
+    }
+]);
+const ServeCommand = Command.extend({
     name: 'serve',
     description: 'Builds and serves your app, rebuilding on file changes.',
     aliases: ['server', 's'],
-    availableOptions: build_1.BaseBuildCommandOptions.concat([
-        { name: 'port', type: Number, default: defaultPort, aliases: ['p'] },
-        {
-            name: 'host',
-            type: String,
-            default: defaultHost,
-            aliases: ['H'],
-            description: "Listens only on " + defaultHost + " by default"
-        },
-        { name: 'proxy-config', type: 'Path', aliases: ['pc'] },
-        { name: 'live-reload', type: Boolean, default: true, aliases: ['lr'] },
-        {
-            name: 'live-reload-host',
-            type: String,
-            aliases: ['lrh'],
-            description: 'Defaults to host'
-        },
-        {
-            name: 'live-reload-base-url',
-            type: String,
-            aliases: ['lrbu'],
-            description: 'Defaults to baseURL'
-        },
-        {
-            name: 'live-reload-port',
-            type: Number,
-            aliases: ['lrp'],
-            description: '(Defaults to port number within [49152...65535])'
-        },
-        {
-            name: 'live-reload-live-css',
-            type: Boolean,
-            default: true,
-            description: 'Whether to live reload CSS (default true)'
-        },
-        { name: 'ssl', type: Boolean, default: false },
-        { name: 'ssl-key', type: String, default: 'ssl/server.key' },
-        { name: 'ssl-cert', type: String, default: 'ssl/server.crt' },
-        {
-            name: 'open',
-            type: Boolean,
-            default: false,
-            aliases: ['o'],
-            description: 'Opens the url in default browser',
-        },
-        {
-            name: 'hmr',
-            type: Boolean,
-            default: false,
-            description: 'Enable hot module replacement',
-        }
-    ]),
+    availableOptions: exports.baseServeCommandOptions,
     run: function (commandOptions) {
-        return require('./serve.run').default.call(this, commandOptions);
+        const ServeTask = require('../tasks/serve').default;
+        version_1.Version.assertAngularVersionIs2_3_1OrHigher(this.project.root);
+        return check_port_1.checkPort(commandOptions.port, commandOptions.host, defaultPort)
+            .then(port => {
+            commandOptions.port = port;
+            const serve = new ServeTask({
+                ui: this.ui,
+                project: this.project,
+            });
+            return serve.run(commandOptions);
+        });
     }
 });
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = ServeCommand;
-//# sourceMappingURL=/Users/twer/dev/sdk/angular-cli/packages/@angular/cli/commands/serve.js.map
+//# sourceMappingURL=/users/twer/private/gde/angular-cli/commands/serve.js.map

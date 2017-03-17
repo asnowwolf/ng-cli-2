@@ -5,10 +5,9 @@
 */
 var Promise            = require('../ext/promise');
 var path               = require('path');
-var findup             = Promise.denodeify(require('findup'));
+var findUp             = require('../../../utilities/find-up').findUp;
 var resolve            = Promise.denodeify(require('resolve'));
 var fs                 = require('fs');
-var existsSync         = require('exists-sync');
 var find               = require('lodash/find');
 var assign             = require('lodash/assign');
 var forOwn             = require('lodash/forOwn');
@@ -18,6 +17,16 @@ var Command            = require('../models/command');
 var UI                 = require('../ui');
 var nodeModulesPath    = require('node-modules-path');
 var getPackageBaseName = require('../utilities/get-package-base-name');
+
+function existsSync(path) {
+  try {
+    fs.accessSync(path);
+    return true;
+  }
+  catch (e) {
+    return false;
+  }
+}
 
 /**
   The Project model is tied to your package.json. It is instiantiated
@@ -121,23 +130,6 @@ Project.prototype.isEmberCLIAddon = function() {
 };
 
 /**
-  Returns the path to the configuration.
-
-  @private
-  @method configPath
-  @return {String} Configuration path
- */
-Project.prototype.configPath = function() {
-  var configPath = 'config';
-
-  if (this.pkg['ember-addon'] && this.pkg['ember-addon']['configPath']) {
-    configPath = this.pkg['ember-addon']['configPath'];
-  }
-
-  return path.join(configPath, 'environment');
-};
-
-/**
   Loads the configuration for this project and its addons.
 
   @private
@@ -146,31 +138,9 @@ Project.prototype.configPath = function() {
   @return {Object}     Merged confiration object
  */
 Project.prototype.config = function(env) {
-  var configPath = this.configPath();
-
-  if (existsSync(path.join(this.root, configPath + '.js'))) {
-    var appConfig = this.require('./' + configPath)(env);
-    var addonsConfig = this.getAddonsConfig(env, appConfig);
-
-    return merge(addonsConfig, appConfig);
-  } else {
-    return this.getAddonsConfig(env, {});
-  }
-};
-
-/**
-  Returns the addons configuration.
-
-  @private
-  @method getAddonsConfig
-  @param  {String} env       Environment name
-  @param  {Object} appConfig Application configuration
-  @return {Object}           Merged configuration of all addons
- */
-Project.prototype.getAddonsConfig = function(env, appConfig) {
   this.initializeAddons();
 
-  var initialConfig = merge({}, appConfig);
+  var initialConfig = {};
 
   return this.addons.reduce(function(config, addon) {
     if (addon.config) {
@@ -375,14 +345,7 @@ Project.prototype.localBlueprintLookupPath = function() {
   @return {Array} List of paths
  */
 Project.prototype.blueprintLookupPaths = function() {
-  if (this.isEmberCLIProject()) {
-    var lookupPaths = [this.localBlueprintLookupPath()];
-    var addonLookupPaths = this.addonBlueprintLookupPaths();
-
-    return lookupPaths.concat(addonLookupPaths);
-  } else {
-    return this.addonBlueprintLookupPaths();
-  }
+  return this.addonBlueprintLookupPaths();
 };
 
 /**
@@ -500,7 +463,7 @@ Project.closest = function(pathName, _ui, _cli) {
       return new Project(result.directory, result.pkg, ui, _cli);
     })
     .catch(function(reason) {
-      handleFindupError(pathName, reason);
+      handleFindupError(pathName);
     });
 };
 
@@ -576,7 +539,7 @@ Project.projectOrnullProject = function(_ui, _cli) {
  */
 Project.getProjectRoot = function () {
   try {
-    var directory = findup.sync(process.cwd(), 'package.json');
+    var directory = path.dirname(findUp(process.cwd(), 'package.json'));
     var pkg = require(path.join(directory, 'package.json'));
 
     if (pkg && pkg.name === 'ember-cli') {
@@ -587,12 +550,8 @@ Project.getProjectRoot = function () {
     debug('getProjectRoot %s -> %s', process.cwd(), directory);
     return directory;
   } catch (reason) {
-    if (isFindupError(reason)) {
-      debug('getProjectRoot: not found. Will use cwd: %s', process.cwd());
-      return process.cwd();
-    } else {
-      throw reason;
-    }
+    debug('getProjectRoot: not found. Will use cwd: %s', process.cwd());
+    return process.cwd();
   }
 };
 
@@ -624,34 +583,24 @@ function ensureUI(_ui) {
 }
 
 function closestPackageJSON(pathName) {
-  return findup(pathName, 'package.json')
-    .then(function(directory) {
-      return Promise.hash({
-        directory: directory,
-        pkg: require(path.join(directory, 'package.json'))
-      });
-    });
+  return Promise.resolve()
+    .then(() => findUp('package.json', pathName))
+    .then(filePath => ({
+      directory: path.dirname(filePath),
+      pkg: require(filePath)
+    }));
 }
 
 function findupPath(pathName) {
   try {
-    return findup.sync(pathName, 'package.json');
+    return path.dirname(findUp('package.json', pathName));
   } catch (reason) {
-    handleFindupError(pathName, reason);
+    handleFindupError(pathName);
   }
 }
 
-function isFindupError(reason) {
-  // Would be nice if findup threw error subclasses
-  return reason && /not found/i.test(reason.message);
-}
-
-function handleFindupError(pathName, reason) {
-  if (isFindupError(reason)) {
-    throw new NotFoundError('No project found at or up from: `' + pathName + '`');
-  } else {
-    throw reason;
-  }
+function handleFindupError(pathName) {
+  throw new NotFoundError('No project found at or up from: `' + pathName + '`');
 }
 
 // Export

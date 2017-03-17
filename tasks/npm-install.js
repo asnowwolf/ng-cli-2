@@ -1,25 +1,33 @@
 "use strict";
-var Task = require('../ember-cli/lib/models/task');
-var chalk = require('chalk');
-var child_process_1 = require('child_process');
 Object.defineProperty(exports, "__esModule", { value: true });
+const Task = require('../ember-cli/lib/models/task');
+const chalk = require("chalk");
+const child_process_1 = require("child_process");
 exports.default = Task.extend({
     run: function () {
-        var ui = this.ui;
+        const ui = this.ui;
+        let packageManager = this.packageManager;
+        if (packageManager === 'default') {
+            packageManager = 'npm';
+        }
         return new Promise(function (resolve, reject) {
-            ui.writeLine(chalk.green('Installing packages for tooling via npm.'));
-            child_process_1.exec('npm install', function (err, stdout, stderr) {
+            ui.writeLine(chalk.green(`Installing packages for tooling via ${packageManager}.`));
+            let installCommand = `${packageManager} --quiet install`;
+            if (packageManager === 'yarn') {
+                installCommand = `${packageManager} install`;
+            }
+            child_process_1.exec(installCommand, (err, _stdout, stderr) => {
                 if (err) {
                     ui.writeLine(stderr);
                     ui.writeLine(chalk.red('Package install failed, see above.'));
                     reject();
                 }
                 else {
-                    ui.writeLine(chalk.green('Installed packages for tooling via npm.'));
+                    ui.writeLine(chalk.green(`Installed packages for tooling via ${packageManager}.`));
                     resolve();
                 }
             });
         });
     }
 });
-//# sourceMappingURL=/Users/twer/dev/sdk/angular-cli/packages/@angular/cli/tasks/npm-install.js.map
+//# sourceMappingURL=/users/twer/private/gde/angular-cli/tasks/npm-install.js.map

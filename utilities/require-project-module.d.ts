@@ -1,1 +1,1 @@
-export declare function requireDependency(root: string, moduleName: string): any;
+export declare function requireProjectModule(root: string, moduleName: string): any;

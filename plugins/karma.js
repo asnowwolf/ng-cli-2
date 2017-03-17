@@ -1,113 +1,124 @@
-const path = require('path');
-const fs = require('fs');
-
-const getTestConfig = require('../models/webpack-configs/test').getTestConfig;
-const CliConfig = require('../models/config').CliConfig;
-
-const init = (config) => {
-  // load Angular CLI config
-  if (!config.angularCli || !config.angularCli.config) {
-    throw new Error('Missing \'angularCli.config\' entry in Karma config');
-  }
-  const angularCliConfig = require(path.join(config.basePath, config.angularCli.config));
-  const appConfig = angularCliConfig.apps[0];
-  const appRoot = path.join(config.basePath, appConfig.root);
-  const environment = config.angularCli.environment || 'dev';
-  const testConfig = {
-    codeCoverage: config.angularCli.codeCoverage || false,
-    sourcemap: config.angularCli.sourcemap,
-    progress: config.angularCli.progress
-  }
-
-  // add assets
-  if (appConfig.assets) {
-    const assets = typeof appConfig.assets === 'string' ? [appConfig.assets] : appConfig.assets;
-    config.proxies = config.proxies || {};
-    assets.forEach(asset => {
-      const fullAssetPath = path.join(config.basePath, appConfig.root, asset);
-      const isDirectory = fs.lstatSync(fullAssetPath).isDirectory();
-      const filePattern = isDirectory ? fullAssetPath + '/**' : fullAssetPath;
-      const proxyPath = isDirectory ? asset + '/' : asset;
-      config.files.push({
-        pattern: filePattern,
-        included: false,
-        served: true,
-        watched: true
-      });
-      // The `files` entry serves the file from `/base/{appConfig.root}/{asset}`
-      //  so, we need to add a URL rewrite that exposes the asset as `/{asset}` only
-      config.proxies['/' + proxyPath] = '/base/' + appConfig.root + '/' + proxyPath;
-    });
-  }
-
-  // add webpack config
-  const webpackConfig = getTestConfig(config.basePath, environment, appConfig, testConfig);
-  const webpackMiddlewareConfig = {
-    noInfo: true, // Hide webpack output because its noisy.
-    stats: { // Also prevent chunk and module display output, cleaner look. Only emit errors.
-      assets: false,
-      colors: true,
-      version: false,
-      hash: false,
-      timings: false,
-      chunks: false,
-      chunkModules: false
-    },
-    watchOptions: {
-      poll: CliConfig.fromProject().config.defaults.poll
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const path = require("path");
+const fs = require("fs");
+const glob = require("glob");
+const utils_1 = require("../models/webpack-configs/utils");
+const webpack_test_config_1 = require("../models/webpack-test-config");
+const getAppFromConfig = require('../utilities/app-utils').getAppFromConfig;
+function isDirectory(path) {
+    try {
+        return fs.statSync(path).isDirectory();
     }
-  };
-
-  config.webpack = Object.assign(webpackConfig, config.webpack);
-  config.webpackMiddleware = Object.assign(webpackMiddlewareConfig, config.webpackMiddleware);
-
-  // replace the angular-cli preprocessor with webpack+sourcemap
-  Object.keys(config.preprocessors)
-    .filter((file) => config.preprocessors[file].indexOf('@angular/cli') !== -1)
-    .map((file) => config.preprocessors[file])
-    .map((arr) => arr.splice(arr.indexOf('@angular/cli'), 1, 'webpack', 'sourcemap'));
-
-  // Add polyfills file
-  if (appConfig.polyfills) {
-    const polyfillsFile = path.resolve(appRoot, appConfig.polyfills);
-    const polyfillsPattern = {
-      pattern: polyfillsFile,
-      included: true,
-      served: true,
-      watched: true
+    catch (_) {
+        return false;
     }
-    Array.prototype.unshift.apply(config.files, [polyfillsPattern]);
-    config.preprocessors[polyfillsFile] = ['webpack', 'sourcemap'];
-  }
-
-  // Add global scripts
-  if (appConfig.scripts && appConfig.scripts.length > 0) {
-    const globalScriptPatterns = appConfig.scripts
-      .map(script => typeof script === 'string' ? { input: script } : script)
-      // Neither renamed nor lazy scripts are currently supported
-      .filter(script => !(script.output || script.lazy))
-      .map(script => ({
-        pattern: path.resolve(appRoot, script.input),
+}
+// Add files to the Karma files array.
+function addKarmaFiles(files, newFiles, prepend = false) {
+    const defaults = {
         included: true,
         served: true,
         watched: true
-      }));
-
-    // Unshift elements onto the beginning of the files array.
+    };
+    const processedFiles = newFiles
+        .filter(file => glob.sync(file.pattern, { nodir: true }).length != 0)
+        .map(file => (Object.assign({}, defaults, file)));
     // It's important to not replace the array, because
     // karma already has a reference to the existing array.
-    Array.prototype.unshift.apply(config.files, globalScriptPatterns);
-  }
+    if (prepend) {
+        files.unshift(...processedFiles);
+    }
+    else {
+        files.push(...processedFiles);
+    }
 }
-
+const init = (config) => {
+    const appConfig = getAppFromConfig(config.angularCli.app);
+    const appRoot = path.join(config.basePath, appConfig.root);
+    const testConfig = Object.assign({
+        environment: 'dev',
+        codeCoverage: false,
+        sourcemap: true,
+        progress: true,
+    }, config.angularCli);
+    // Add assets. This logic is mimics the one present in GlobCopyWebpackPlugin.
+    if (appConfig.assets) {
+        config.proxies = config.proxies || {};
+        appConfig.assets.forEach((pattern) => {
+            // Convert all string patterns to Pattern type.
+            pattern = typeof pattern === 'string' ? { glob: pattern } : pattern;
+            // Add defaults.
+            // Input is always resolved relative to the appRoot.
+            pattern.input = path.resolve(appRoot, pattern.input || '');
+            pattern.output = pattern.output || '';
+            pattern.glob = pattern.glob || '';
+            // Build karma file pattern.
+            const assetPath = path.join(pattern.input, pattern.glob);
+            const filePattern = isDirectory(assetPath) ? assetPath + '/**' : assetPath;
+            addKarmaFiles(config.files, [{ pattern: filePattern, included: false }]);
+            // The `files` entry serves the file from `/base/{asset.input}/{asset.glob}`.
+            // We need to add a URL rewrite that exposes the asset as `/{asset.output}/{asset.glob}`.
+            let relativePath, proxyPath;
+            if (fs.existsSync(assetPath)) {
+                relativePath = path.relative(config.basePath, assetPath);
+                proxyPath = path.join(pattern.output, pattern.glob);
+            }
+            else {
+                // For globs (paths that don't exist), proxy pattern.output to pattern.input.
+                relativePath = path.relative(config.basePath, pattern.input);
+                proxyPath = path.join(pattern.output);
+            }
+            // Proxy paths must have only forward slashes.
+            proxyPath = proxyPath.replace(/\\/g, '/');
+            config.proxies['/' + proxyPath] = '/base/' + relativePath;
+        });
+    }
+    // Add webpack config.
+    const webpackConfig = new webpack_test_config_1.WebpackTestConfig(testConfig, appConfig).buildConfig();
+    const webpackMiddlewareConfig = {
+        noInfo: true,
+        stats: {
+            assets: false,
+            colors: true,
+            version: false,
+            hash: false,
+            timings: false,
+            chunks: false,
+            chunkModules: false
+        },
+        watchOptions: {
+            poll: testConfig.poll
+        }
+    };
+    config.webpack = Object.assign(webpackConfig, config.webpack);
+    config.webpackMiddleware = Object.assign(webpackMiddlewareConfig, config.webpackMiddleware);
+    // Replace the @angular/cli preprocessor with webpack+sourcemap.
+    Object.keys(config.preprocessors)
+        .filter((file) => config.preprocessors[file].indexOf('@angular/cli') !== -1)
+        .map((file) => config.preprocessors[file])
+        .map((arr) => arr.splice(arr.indexOf('@angular/cli'), 1, 'webpack', 'sourcemap'));
+    // Add global scripts. This logic mimics the one in webpack-configs/common.
+    if (appConfig.scripts && appConfig.scripts.length > 0) {
+        const globalScriptPatterns = utils_1.extraEntryParser(appConfig.scripts, appRoot, 'scripts')
+            .filter(script => !(script.output || script.lazy))
+            .map(script => ({ pattern: path.resolve(appRoot, script.input) }));
+        addKarmaFiles(config.files, globalScriptPatterns, true);
+    }
+    // Add polyfills file before everything else
+    if (appConfig.polyfills) {
+        const polyfillsFile = path.resolve(appRoot, appConfig.polyfills);
+        config.preprocessors[polyfillsFile] = ['webpack', 'sourcemap'];
+        addKarmaFiles(config.files, [{ pattern: polyfillsFile }], true);
+    }
+};
 init.$inject = ['config'];
-
-// dummy preprocessor, just to keep karma from showing a warning
-const preprocessor = () => (content, file, done) => done(null, content);
+// Dummy preprocessor, just to keep karma from showing a warning.
+const preprocessor = () => (content, _file, done) => done(null, content);
 preprocessor.$inject = [];
-
-// also export karma-webpack and karma-sourcemap-loader
+// Also export karma-webpack and karma-sourcemap-loader.
 module.exports = Object.assign({
-  'framework:@angular/cli': ['factory', init],
-  'preprocessor:@angular/cli': ['factory', preprocessor]
+    'framework:@angular/cli': ['factory', init],
+    'preprocessor:@angular/cli': ['factory', preprocessor]
 }, require('karma-webpack'), require('karma-sourcemap-loader'));
+//# sourceMappingURL=/users/twer/private/gde/angular-cli/plugins/karma.js.map

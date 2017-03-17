@@ -1,15 +1,16 @@
 "use strict";
-var Command = require('../ember-cli/lib/models/command');
-var InitCommand = Command.extend({
+Object.defineProperty(exports, "__esModule", { value: true });
+const Command = require('../ember-cli/lib/models/command');
+const InitCommand = Command.extend({
     name: 'init',
-    description: 'Creates a new angular-cli project in the current folder.',
-    aliases: ['u', 'update', 'i'],
+    description: 'Creates a new Angular CLI project in the current folder.',
     works: 'everywhere',
     availableOptions: [
         { name: 'dry-run', type: Boolean, default: false, aliases: ['d'] },
         { name: 'verbose', type: Boolean, default: false, aliases: ['v'] },
         { name: 'link-cli', type: Boolean, default: false, aliases: ['lc'] },
-        { name: 'skip-npm', type: Boolean, default: false, aliases: ['sn'] },
+        { name: 'ng4', type: Boolean, default: false },
+        { name: 'skip-install', type: Boolean, default: false, aliases: ['si'] },
         { name: 'skip-git', type: Boolean, default: false, aliases: ['sg'] },
         { name: 'skip-tests', type: Boolean, default: false, aliases: ['st'] },
         { name: 'skip-commit', type: Boolean, default: false, aliases: ['sc'] },
@@ -23,10 +24,16 @@ var InitCommand = Command.extend({
     ],
     anonymousOptions: ['<glob-pattern>'],
     run: function (commandOptions, rawArgs) {
-        return require('./init.run').default.call(this, commandOptions, rawArgs);
+        const InitTask = require('../tasks/init').default;
+        const initTask = new InitTask({
+            cliProject: this.project,
+            project: this.project,
+            tasks: this.tasks,
+            ui: this.ui,
+        });
+        return initTask.run(commandOptions, rawArgs);
     }
 });
 InitCommand.overrideCore = true;
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = InitCommand;
-//# sourceMappingURL=/Users/twer/dev/sdk/angular-cli/packages/@angular/cli/commands/init.js.map
+//# sourceMappingURL=/users/twer/private/gde/angular-cli/commands/init.js.map

@@ -1,11 +1,12 @@
 "use strict";
-var Command = require('../ember-cli/lib/models/command');
-var stringUtils = require('ember-cli-string-utils');
-var chalk = require('chalk');
+Object.defineProperty(exports, "__esModule", { value: true });
+const Command = require('../ember-cli/lib/models/command');
+const stringUtils = require('ember-cli-string-utils');
+const chalk = require("chalk");
 function pickOne(of) {
     return of[Math.floor(Math.random() * of.length)];
 }
-var MakeThisAwesomeCommand = Command.extend({
+const MakeThisAwesomeCommand = Command.extend({
     name: 'make-this-awesome',
     works: 'insideProject',
     run: function (commandOptions, rawArgs) {
@@ -13,17 +14,16 @@ var MakeThisAwesomeCommand = Command.extend({
         return Promise.resolve();
     },
     makeThisAwesome: function () {
-        var phrase = pickOne([
-            "You're on it, there's nothing for me to do!",
-            "Let's take a look... nope, it's all good!",
-            "You're doing fine.",
-            "You're already doing great.",
-            "Nothing to do; already awesome. Exiting.",
-            "Error 418: As Awesome As Can Get."
+        const phrase = pickOne([
+            `You're on it, there's nothing for me to do!`,
+            `Let's take a look... nope, it's all good!`,
+            `You're doing fine.`,
+            `You're already doing great.`,
+            `Nothing to do; already awesome. Exiting.`,
+            `Error 418: As Awesome As Can Get.`
         ]);
         console.log(chalk.green(phrase));
     }
 });
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = MakeThisAwesomeCommand;
-//# sourceMappingURL=/Users/twer/dev/sdk/angular-cli/packages/@angular/cli/commands/easter-egg.js.map
+//# sourceMappingURL=/users/twer/private/gde/angular-cli/commands/easter-egg.js.map

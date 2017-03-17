@@ -1,27 +1,27 @@
 // replace with the real thing when PR is merged
 // https://github.com/angular/universal/pull/464
 "use strict";
-var PrerenderWebpackPlugin = (function () {
-    function PrerenderWebpackPlugin(options) {
+Object.defineProperty(exports, "__esModule", { value: true });
+class PrerenderWebpackPlugin {
+    constructor(options) {
         this.options = options;
         // maintain your platform instance
         this.bootloader = require(this.options.configPath).getBootloader();
     }
-    PrerenderWebpackPlugin.prototype.apply = function (compiler) {
-        var _this = this;
-        compiler.plugin('emit', function (compilation, callback) {
-            if (compilation.assets.hasOwnProperty(_this.options.templatePath)) {
+    apply(compiler) {
+        compiler.plugin('emit', (compilation, callback) => {
+            if (compilation.assets.hasOwnProperty(this.options.templatePath)) {
                 // we need to cache the template file to be able to re-serialize it
                 // even when it is not being emitted
-                _this.cachedTemplate = compilation.assets[_this.options.templatePath].source();
+                this.cachedTemplate = compilation.assets[this.options.templatePath].source();
             }
-            if (_this.cachedTemplate) {
-                _this.decacheAppFiles();
-                require(_this.options.configPath).serialize(_this.bootloader, _this.cachedTemplate)
-                    .then(function (html) {
-                    compilation.assets[_this.options.templatePath] = {
-                        source: function () { return html; },
-                        size: function () { return html.length; }
+            if (this.cachedTemplate) {
+                this.decacheAppFiles();
+                require(this.options.configPath).serialize(this.bootloader, this.cachedTemplate)
+                    .then((html) => {
+                    compilation.assets[this.options.templatePath] = {
+                        source: () => html,
+                        size: () => html.length
                     };
                     callback();
                 });
@@ -30,22 +30,20 @@ var PrerenderWebpackPlugin = (function () {
                 callback();
             }
         });
-    };
-    PrerenderWebpackPlugin.prototype.decacheAppFiles = function () {
-        var _this = this;
+    }
+    decacheAppFiles() {
         // delete all app files from cache, but keep libs
         // this is needed so that the config file can reimport up to date
         // versions of the app files
         delete require.cache[this.options.configPath];
         Object.keys(require.cache)
-            .filter(function (key) { return key.startsWith(_this.options.appPath); })
+            .filter(key => key.startsWith(this.options.appPath))
             .forEach(function (key) {
             // console.log('===', key);
             delete require.cache[key];
         });
-    };
-    return PrerenderWebpackPlugin;
-}());
+    }
+}
 exports.PrerenderWebpackPlugin = PrerenderWebpackPlugin;
 ;
-//# sourceMappingURL=/Users/twer/dev/sdk/angular-cli/packages/@angular/cli/utilities/prerender-webpack-plugin.js.map
+//# sourceMappingURL=/users/twer/private/gde/angular-cli/utilities/prerender-webpack-plugin.js.map

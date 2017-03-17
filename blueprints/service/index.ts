@@ -1,3 +1,6 @@
+import {NodeHost} from '../../lib/ast-tools';
+import {CliConfig} from '../../models/config';
+import {getAppFromConfig} from '../../utilities/app-utils';
 import { oneLine } from 'common-tags';
 
 const path = require('path');
@@ -5,25 +8,44 @@ const fs = require('fs');
 const chalk = require('chalk');
 const dynamicPathParser = require('../../utilities/dynamic-path-parser');
 const Blueprint = require('../../ember-cli/lib/models/blueprint');
-const NodeHost = require('@angular-cli/ast-tools').NodeHost;
 const stringUtils = require('ember-cli-string-utils');
 const astUtils = require('../../utilities/ast-utils');
 const getFiles = Blueprint.prototype.files;
 
 export default Blueprint.extend({
   description: '',
+  aliases: ['s'],
 
   availableOptions: [
-    { name: 'flat', type: Boolean, default: true },
-    { name: 'spec', type: Boolean },
-    { name: 'module', type: String, aliases: ['m'] }
+    {
+      name: 'flat',
+      type: Boolean,
+      description: 'Flag to indicate if a dir is created.'
+    },
+    {
+      name: 'spec',
+      type: Boolean,
+      description: 'Specifies if a spec file is generated.'
+    },
+    {
+      name: 'module',
+      type: String, aliases: ['m'],
+      description: 'Allows specification of the declaring module.'
+    },
+    {
+      name: 'app',
+      type: String,
+      aliases: ['a'],
+      description: 'Specifies app name to use.'
+    }
   ],
 
   beforeInstall: function(options: any) {
     if (options.module) {
       // Resolve path to module
       const modulePath = options.module.endsWith('.ts') ? options.module : `${options.module}.ts`;
-      const parsedPath = dynamicPathParser(this.project, modulePath);
+      const appConfig = getAppFromConfig(this.options.app);
+      const parsedPath = dynamicPathParser(this.project, modulePath, appConfig);
       this.pathToModule = path.join(this.project.root, parsedPath.dir, parsedPath.base);
 
       if (!fs.existsSync(this.pathToModule)) {
@@ -33,16 +55,19 @@ export default Blueprint.extend({
   },
 
   normalizeEntityName: function (entityName: string) {
-    const parsedPath = dynamicPathParser(this.project, entityName);
+    const appConfig = getAppFromConfig(this.options.app);
+    const parsedPath = dynamicPathParser(this.project, entityName, appConfig);
 
     this.dynamicPath = parsedPath;
     return parsedPath.name;
   },
 
   locals: function (options: any) {
+    options.flat = options.flat !== undefined ?
+      options.flat : CliConfig.getValue('defaults.service.flat');
+
     options.spec = options.spec !== undefined ?
-      options.spec :
-      this.project.ngConfigObj.get('defaults.spec.service');
+      options.spec : CliConfig.getValue('defaults.service.spec');
 
     return {
       dynamicPath: this.dynamicPath.dir,

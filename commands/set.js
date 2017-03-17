@@ -1,13 +1,20 @@
 "use strict";
-var config_1 = require('../models/config');
-var SilentError = require('silent-error');
-var Command = require('../ember-cli/lib/models/command');
-var SetCommand = Command.extend({
+Object.defineProperty(exports, "__esModule", { value: true });
+const config_1 = require("../models/config");
+const SilentError = require('silent-error');
+const Command = require('../ember-cli/lib/models/command');
+const SetCommand = Command.extend({
     name: 'set',
     description: 'Set a value in the configuration.',
     works: 'everywhere',
     availableOptions: [
-        { name: 'global', type: Boolean, 'default': false, aliases: ['g'] },
+        {
+            name: 'global',
+            type: Boolean,
+            'default': false,
+            aliases: ['g'],
+            description: 'Set the value in the global configuration rather than in your project\'s.'
+        },
     ],
     asBoolean: function (raw) {
         if (raw == 'true' || raw == '1') {
@@ -17,51 +24,56 @@ var SetCommand = Command.extend({
             return false;
         }
         else {
-            throw new SilentError("Invalid boolean value: \"" + raw + "\"");
+            throw new SilentError(`Invalid boolean value: "${raw}"`);
         }
     },
     asNumber: function (raw) {
         if (Number.isNaN(+raw)) {
-            throw new SilentError("Invalid number value: \"" + raw + "\"");
+            throw new SilentError(`Invalid number value: "${raw}"`);
         }
         return +raw;
     },
     run: function (commandOptions, rawArgs) {
-        var _this = this;
-        return new Promise(function (resolve) {
-            var config = commandOptions.global ? config_1.CliConfig.fromGlobal() : config_1.CliConfig.fromProject();
+        return new Promise(resolve => {
+            const config = commandOptions.global ? config_1.CliConfig.fromGlobal() : config_1.CliConfig.fromProject();
             if (config === null) {
                 throw new SilentError('No config found. If you want to use global configuration, '
                     + 'you need the --global argument.');
             }
-            var jsonPath = rawArgs[0], rawValue = rawArgs[1];
+            let [jsonPath, rawValue] = rawArgs;
             if (rawValue === undefined) {
-                _a = jsonPath.split('=', 2), jsonPath = _a[0], rawValue = _a[1];
+                [jsonPath, rawValue] = jsonPath.split('=', 2);
                 if (rawValue === undefined) {
                     throw new SilentError('Must specify a value.');
                 }
             }
-            var type = config.typeOf(jsonPath);
-            var value = rawValue;
+            const type = config.typeOf(jsonPath);
+            let value = rawValue;
             switch (type) {
                 case 'boolean':
-                    value = _this.asBoolean(rawValue);
+                    value = this.asBoolean(rawValue);
                     break;
                 case 'number':
-                    value = _this.asNumber(rawValue);
+                    value = this.asNumber(rawValue);
                     break;
                 case 'string':
                     value = rawValue;
                     break;
-                default: value = JSON.parse(rawValue);
+                default: value = parseValue(rawValue, jsonPath);
             }
             config.set(jsonPath, value);
             config.save();
             resolve();
-            var _a;
         });
     }
 });
-Object.defineProperty(exports, "__esModule", { value: true });
+function parseValue(rawValue, path) {
+    try {
+        return JSON.parse(rawValue);
+    }
+    catch (error) {
+        throw new SilentError(`No node found at path ${path}`);
+    }
+}
 exports.default = SetCommand;
-//# sourceMappingURL=/Users/twer/dev/sdk/angular-cli/packages/@angular/cli/commands/set.js.map
+//# sourceMappingURL=/users/twer/private/gde/angular-cli/commands/set.js.map

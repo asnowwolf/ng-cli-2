@@ -1,22 +1,25 @@
 "use strict";
-var Command = require('../ember-cli/lib/models/command');
-var path = require('path');
-var child_process = require('child_process');
-var chalk = require('chalk');
-var VersionCommand = Command.extend({
+Object.defineProperty(exports, "__esModule", { value: true });
+const Command = require('../ember-cli/lib/models/command');
+const path = require("path");
+const child_process = require("child_process");
+const chalk = require("chalk");
+const config_1 = require("../models/config");
+const VersionCommand = Command.extend({
     name: 'version',
-    description: 'outputs angular-cli version',
+    description: 'Outputs Angular CLI version.',
     aliases: ['v', '--version', '-v'],
     works: 'everywhere',
     availableOptions: [{
             name: 'verbose',
-            type: Boolean, 'default': false
+            type: Boolean,
+            'default': false,
+            description: 'Adds more details to output logging.'
         }],
     run: function (options) {
-        var _this = this;
-        var versions = process.versions;
-        var pkg = require(path.resolve(__dirname, '..', 'package.json'));
-        var projPkg;
+        let versions = process.versions;
+        const pkg = require(path.resolve(__dirname, '..', 'package.json'));
+        let projPkg;
         try {
             projPkg = require(path.resolve(this.project.root, 'package.json'));
         }
@@ -24,57 +27,66 @@ var VersionCommand = Command.extend({
             projPkg = undefined;
         }
         versions.os = process.platform + ' ' + process.arch;
-        var alwaysPrint = ['node', 'os'];
-        var roots = ['@angular/', '@ngtools/'];
-        var ngCliVersion = pkg.version;
+        const alwaysPrint = ['node', 'os'];
+        const roots = ['@angular/', '@ngtools/'];
+        let ngCliVersion = pkg.version;
         if (!__dirname.match(/node_modules/)) {
-            var gitBranch = '??';
+            let gitBranch = '??';
             try {
-                var gitRefName = '' + child_process.execSync('git symbolic-ref HEAD', { cwd: __dirname });
+                const gitRefName = '' + child_process.execSync('git symbolic-ref HEAD', { cwd: __dirname });
                 gitBranch = path.basename(gitRefName.replace('\n', ''));
             }
             catch (e) {
             }
-            ngCliVersion = "local (v" + pkg.version + ", branch: " + gitBranch + ")";
+            ngCliVersion = `local (v${pkg.version}, branch: ${gitBranch})`;
+        }
+        const config = config_1.CliConfig.fromProject();
+        if (config && config.config && config.config.project) {
+            if (config.config.project.ejected) {
+                ngCliVersion += ' (e)';
+            }
         }
         if (projPkg) {
-            roots.forEach(function (root) {
-                versions = Object.assign(versions, _this.getDependencyVersions(projPkg, root));
+            roots.forEach(root => {
+                versions = Object.assign(versions, this.getDependencyVersions(projPkg, root));
             });
         }
-        var asciiArt = "\n                             _                           _  _\n  __ _  _ __    __ _  _   _ | |  __ _  _ __         ___ | |(_)\n / _` || '_ \\  / _` || | | || | / _` || '__|_____  / __|| || |\n| (_| || | | || (_| || |_| || || (_| || |  |_____|| (__ | || |\n \\__,_||_| |_| \\__, | \\__,_||_| \\__,_||_|          \\___||_||_|\n               |___/";
+        const asciiArt = `    _                      _                 ____ _     ___
+   / \\   _ __   __ _ _   _| | __ _ _ __     / ___| |   |_ _|
+  / △ \\ | '_ \\ / _\` | | | | |/ _\` | '__|   | |   | |    | |
+ / ___ \\| | | | (_| | |_| | | (_| | |      | |___| |___ | |
+/_/   \\_\\_| |_|\\__, |\\__,_|_|\\__,_|_|       \\____|_____|___|
+               |___/`;
         this.ui.writeLine(chalk.red(asciiArt));
         this.printVersion('@angular/cli', ngCliVersion);
-        var _loop_1 = function(module_1) {
-            var isRoot = roots.some(function (root) { return module_1.startsWith(root); });
-            if (options.verbose || alwaysPrint.indexOf(module_1) > -1 || isRoot) {
-                this_1.printVersion(module_1, versions[module_1]);
+        for (const module of Object.keys(versions)) {
+            const isRoot = roots.some(root => module.startsWith(root));
+            if (options.verbose || alwaysPrint.indexOf(module) > -1 || isRoot) {
+                this.printVersion(module, versions[module]);
             }
-        };
-        var this_1 = this;
-        for (var _i = 0, _a = Object.keys(versions); _i < _a.length; _i++) {
-            var module_1 = _a[_i];
-            _loop_1(module_1);
         }
     },
     getDependencyVersions: function (pkg, prefix) {
-        var _this = this;
-        var modules = {};
-        Object.keys(pkg.dependencies || {})
-            .concat(Object.keys(pkg.devDependencies || {}))
-            .filter(function (depName) { return depName && depName.startsWith(prefix); })
-            .forEach(function (key) { return modules[key] = _this.getVersion(key); });
+        const modules = {};
+        Object.keys(pkg['dependencies'] || {})
+            .concat(Object.keys(pkg['devDependencies'] || {}))
+            .filter(depName => depName && depName.startsWith(prefix))
+            .forEach(key => modules[key] = this.getVersion(key));
         return modules;
     },
     getVersion: function (moduleName) {
-        var modulePkg = require(path.resolve(this.project.root, 'node_modules', moduleName, 'package.json'));
-        return modulePkg.version;
+        try {
+            const modulePkg = require(path.resolve(this.project.root, 'node_modules', moduleName, 'package.json'));
+            return modulePkg.version;
+        }
+        catch (e) {
+            return 'error';
+        }
     },
     printVersion: function (module, version) {
         this.ui.writeLine(module + ': ' + version);
     }
 });
 VersionCommand.overrideCore = true;
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = VersionCommand;
-//# sourceMappingURL=/Users/twer/dev/sdk/angular-cli/packages/@angular/cli/commands/version.js.map
+//# sourceMappingURL=/users/twer/private/gde/angular-cli/commands/version.js.map

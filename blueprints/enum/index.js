@@ -1,12 +1,23 @@
 "use strict";
-var stringUtils = require('ember-cli-string-utils');
-var dynamicPathParser = require('../../utilities/dynamic-path-parser');
-var Blueprint = require('../../ember-cli/lib/models/blueprint');
 Object.defineProperty(exports, "__esModule", { value: true });
+const app_utils_1 = require("../../utilities/app-utils");
+const stringUtils = require('ember-cli-string-utils');
+const dynamicPathParser = require('../../utilities/dynamic-path-parser');
+const Blueprint = require('../../ember-cli/lib/models/blueprint');
 exports.default = Blueprint.extend({
     description: '',
+    aliases: ['e'],
+    availableOptions: [
+        {
+            name: 'app',
+            type: String,
+            aliases: ['a'],
+            description: 'Specifies app name to use.'
+        }
+    ],
     normalizeEntityName: function (entityName) {
-        var parsedPath = dynamicPathParser(this.project, entityName);
+        const appConfig = app_utils_1.getAppFromConfig(this.options.app);
+        const parsedPath = dynamicPathParser(this.project, entityName, appConfig);
         this.dynamicPath = parsedPath;
         return parsedPath.name;
     },
@@ -19,17 +30,16 @@ exports.default = Blueprint.extend({
         };
     },
     fileMapTokens: function () {
-        var _this = this;
         // Return custom template variables here.
         return {
-            __path__: function () {
-                _this.generatePath = _this.dynamicPath.dir;
-                return _this.generatePath;
+            __path__: () => {
+                this.generatePath = this.dynamicPath.dir;
+                return this.generatePath;
             },
-            __name__: function () {
-                return _this.fileName;
+            __name__: () => {
+                return this.fileName;
             }
         };
     }
 });
-//# sourceMappingURL=/Users/twer/dev/sdk/angular-cli/packages/@angular/cli/blueprints/enum/index.js.map
+//# sourceMappingURL=/users/twer/private/gde/angular-cli/blueprints/enum/index.js.map

@@ -1,4 +1,3 @@
-/// <reference types="chai" />
 export declare class CliConfig<JsonType> {
     private _configPath;
     private _config;

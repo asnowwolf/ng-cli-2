@@ -2,10 +2,14 @@
 function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
-__export(require('./common'));
-__export(require('./development'));
-__export(require('./production'));
-__export(require('./styles'));
-__export(require('./typescript'));
-__export(require('./utils'));
-//# sourceMappingURL=/Users/twer/dev/sdk/angular-cli/packages/@angular/cli/models/webpack-configs/index.js.map
+Object.defineProperty(exports, "__esModule", { value: true });
+__export(require("./browser"));
+__export(require("./common"));
+__export(require("./development"));
+__export(require("./production"));
+__export(require("./styles"));
+__export(require("./test"));
+__export(require("./typescript"));
+__export(require("./utils"));
+__export(require("./xi18n"));
+//# sourceMappingURL=/users/twer/private/gde/angular-cli/models/webpack-configs/index.js.map

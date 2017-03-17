@@ -1,27 +1,49 @@
 "use strict";
-var common_tags_1 = require('common-tags');
-var path = require('path');
-var fs = require('fs');
-var chalk = require('chalk');
-var dynamicPathParser = require('../../utilities/dynamic-path-parser');
-var Blueprint = require('../../ember-cli/lib/models/blueprint');
-var NodeHost = require('@angular-cli/ast-tools').NodeHost;
-var stringUtils = require('ember-cli-string-utils');
-var astUtils = require('../../utilities/ast-utils');
-var getFiles = Blueprint.prototype.files;
 Object.defineProperty(exports, "__esModule", { value: true });
+const ast_tools_1 = require("../../lib/ast-tools");
+const config_1 = require("../../models/config");
+const app_utils_1 = require("../../utilities/app-utils");
+const common_tags_1 = require("common-tags");
+const path = require('path');
+const fs = require('fs');
+const chalk = require('chalk');
+const dynamicPathParser = require('../../utilities/dynamic-path-parser');
+const Blueprint = require('../../ember-cli/lib/models/blueprint');
+const stringUtils = require('ember-cli-string-utils');
+const astUtils = require('../../utilities/ast-utils');
+const getFiles = Blueprint.prototype.files;
 exports.default = Blueprint.extend({
     description: '',
+    aliases: ['s'],
     availableOptions: [
-        { name: 'flat', type: Boolean, default: true },
-        { name: 'spec', type: Boolean },
-        { name: 'module', type: String, aliases: ['m'] }
+        {
+            name: 'flat',
+            type: Boolean,
+            description: 'Flag to indicate if a dir is created.'
+        },
+        {
+            name: 'spec',
+            type: Boolean,
+            description: 'Specifies if a spec file is generated.'
+        },
+        {
+            name: 'module',
+            type: String, aliases: ['m'],
+            description: 'Allows specification of the declaring module.'
+        },
+        {
+            name: 'app',
+            type: String,
+            aliases: ['a'],
+            description: 'Specifies app name to use.'
+        }
     ],
     beforeInstall: function (options) {
         if (options.module) {
             // Resolve path to module
-            var modulePath = options.module.endsWith('.ts') ? options.module : options.module + ".ts";
-            var parsedPath = dynamicPathParser(this.project, modulePath);
+            const modulePath = options.module.endsWith('.ts') ? options.module : `${options.module}.ts`;
+            const appConfig = app_utils_1.getAppFromConfig(this.options.app);
+            const parsedPath = dynamicPathParser(this.project, modulePath, appConfig);
             this.pathToModule = path.join(this.project.root, parsedPath.dir, parsedPath.base);
             if (!fs.existsSync(this.pathToModule)) {
                 throw 'Module specified does not exist';
@@ -29,59 +51,62 @@ exports.default = Blueprint.extend({
         }
     },
     normalizeEntityName: function (entityName) {
-        var parsedPath = dynamicPathParser(this.project, entityName);
+        const appConfig = app_utils_1.getAppFromConfig(this.options.app);
+        const parsedPath = dynamicPathParser(this.project, entityName, appConfig);
         this.dynamicPath = parsedPath;
         return parsedPath.name;
     },
     locals: function (options) {
+        options.flat = options.flat !== undefined ?
+            options.flat : config_1.CliConfig.getValue('defaults.service.flat');
         options.spec = options.spec !== undefined ?
-            options.spec :
-            this.project.ngConfigObj.get('defaults.spec.service');
+            options.spec : config_1.CliConfig.getValue('defaults.service.spec');
         return {
             dynamicPath: this.dynamicPath.dir,
             flat: options.flat
         };
     },
     files: function () {
-        var fileList = getFiles.call(this);
+        let fileList = getFiles.call(this);
         if (this.options && !this.options.spec) {
-            fileList = fileList.filter(function (p) { return p.indexOf('__name__.service.spec.ts') < 0; });
+            fileList = fileList.filter(p => p.indexOf('__name__.service.spec.ts') < 0);
         }
         return fileList;
     },
     fileMapTokens: function (options) {
-        var _this = this;
         // Return custom template variables here.
         return {
-            __path__: function () {
-                var dir = _this.dynamicPath.dir;
+            __path__: () => {
+                let dir = this.dynamicPath.dir;
                 if (!options.locals.flat) {
                     dir += path.sep + options.dasherizedModuleName;
                 }
-                _this.generatePath = dir;
+                this.generatePath = dir;
                 return dir;
             }
         };
     },
-    afterInstall: function (options) {
-        var returns = [];
+    afterInstall(options) {
+        const returns = [];
         if (!this.pathToModule) {
-            var warningMessage = (_a = ["\n        Service is generated but not provided,\n        it must be provided to be used\n      "], _a.raw = ["\n        Service is generated but not provided,\n        it must be provided to be used\n      "], common_tags_1.oneLine(_a));
+            const warningMessage = common_tags_1.oneLine `
+        Service is generated but not provided,
+        it must be provided to be used
+      `;
             this._writeStatusToUI(chalk.yellow, 'WARNING', warningMessage);
         }
         else {
-            var className = stringUtils.classify(options.entity.name + "Service");
-            var fileName = stringUtils.dasherize(options.entity.name + ".service");
-            var fullGeneratePath = path.join(this.project.root, this.generatePath);
-            var moduleDir = path.parse(this.pathToModule).dir;
-            var relativeDir = path.relative(moduleDir, fullGeneratePath);
-            var importPath = relativeDir ? "./" + relativeDir + "/" + fileName : "./" + fileName;
+            const className = stringUtils.classify(`${options.entity.name}Service`);
+            const fileName = stringUtils.dasherize(`${options.entity.name}.service`);
+            const fullGeneratePath = path.join(this.project.root, this.generatePath);
+            const moduleDir = path.parse(this.pathToModule).dir;
+            const relativeDir = path.relative(moduleDir, fullGeneratePath);
+            const importPath = relativeDir ? `./${relativeDir}/${fileName}` : `./${fileName}`;
             returns.push(astUtils.addProviderToModule(this.pathToModule, className, importPath)
-                .then(function (change) { return change.apply(NodeHost); }));
+                .then((change) => change.apply(ast_tools_1.NodeHost)));
             this._writeStatusToUI(chalk.yellow, 'update', path.relative(this.project.root, this.pathToModule));
         }
         return Promise.all(returns);
-        var _a;
     }
 });
-//# sourceMappingURL=/Users/twer/dev/sdk/angular-cli/packages/@angular/cli/blueprints/service/index.js.map
+//# sourceMappingURL=/users/twer/private/gde/angular-cli/blueprints/service/index.js.map
