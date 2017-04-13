@@ -68,10 +68,10 @@ const TestCommand = EmberTestCommand.extend({
             description: 'List of reporters to use.'
         },
         {
-            name: 'sourcemap',
+            name: 'sourcemaps',
             type: Boolean,
             default: true,
-            aliases: ['sm'],
+            aliases: ['sm', 'sourcemap'],
             description: 'Output sourcemaps.'
         },
         {

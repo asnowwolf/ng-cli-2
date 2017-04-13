@@ -33,9 +33,9 @@ exports.baseBuildCommandOptions = [
         description: 'Build using Ahead of Time compilation.'
     },
     {
-        name: 'sourcemap',
+        name: 'sourcemaps',
         type: Boolean,
-        aliases: ['sm', 'sourcemaps'],
+        aliases: ['sm', 'sourcemap'],
         description: 'Output sourcemaps.'
     },
     {
@@ -115,7 +115,7 @@ exports.baseBuildCommandOptions = [
         name: 'app',
         type: String,
         aliases: ['a'],
-        description: 'Specifies app name to use.'
+        description: 'Specifies app name or index to use.'
     }
 ];
 const BuildCommand = Command.extend({
@@ -127,7 +127,7 @@ const BuildCommand = Command.extend({
             name: 'stats-json',
             type: Boolean,
             default: false,
-            description: common_tags_1.oneLine `Generates a \`stats.json\` file which can be analyzed using tools 
+            description: common_tags_1.oneLine `Generates a \`stats.json\` file which can be analyzed using tools
        such as: \`webpack-bundle-analyzer\` or https://webpack.github.io/analyse.`
         }
     ]),

@@ -29,9 +29,9 @@ exports.default = Task.extend({
                 project: this.project
             });
         }
+        const packageManager = config_1.CliConfig.fromGlobal().get('packageManager');
         let npmInstall;
         if (!commandOptions.skipInstall) {
-            const packageManager = config_1.CliConfig.fromGlobal().get('packageManager');
             npmInstall = new npm_install_1.default({
                 ui: this.ui,
                 project: this.project,
@@ -42,7 +42,8 @@ exports.default = Task.extend({
         if (commandOptions.linkCli) {
             linkCli = new link_cli_1.default({
                 ui: this.ui,
-                project: this.project
+                project: this.project,
+                packageManager
             });
         }
         const project = this.project;
@@ -61,14 +62,14 @@ exports.default = Task.extend({
             rawArgs: rawArgs.toString(),
             sourceDir: commandOptions.sourceDir,
             style: commandOptions.style,
-            prefix: commandOptions.prefix,
+            prefix: commandOptions.prefix.trim() || 'app',
             routing: commandOptions.routing,
             inlineStyle: commandOptions.inlineStyle,
             inlineTemplate: commandOptions.inlineTemplate,
             ignoredUpdateFiles: ['favicon.ico'],
-            ng4: commandOptions.ng4,
             skipGit: commandOptions.skipGit,
-            skipTests: commandOptions.skipTests
+            skipTests: commandOptions.skipTests,
+            skipE2e: commandOptions.skipE2e
         };
         validate_project_name_1.validateProjectName(packageName);
         blueprintOpts.blueprint = normalizeBlueprint(blueprintOpts.blueprint);

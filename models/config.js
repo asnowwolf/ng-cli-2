@@ -76,7 +76,8 @@ class CliConfig extends config_1.CliConfig {
     }
     static fromProject(projectPath) {
         const configPath = this.configFilePath(projectPath);
-        if (!configPath || configPath === this.globalConfigFilePath()) {
+        if (!configPath ||
+            (configPath === this.globalConfigFilePath() && process.cwd() !== path.dirname(configPath))) {
             return null;
         }
         if (configCacheMap.has(configPath)) {

@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs = require("fs");
 const path = require("path");
+const chalk = require("chalk");
 const denodeify = require("denodeify");
 const init_1 = require("./init");
 const config_1 = require("../models/config");
@@ -13,7 +14,7 @@ const SilentError = require('silent-error');
 const mkdir = denodeify(fs.mkdir);
 const NewCommand = Command.extend({
     name: 'new',
-    description: `Creates a new directory and a new Angular app.`,
+    description: `Creates a new directory and a new Angular app eg. "ng new [name]".`,
     works: 'outsideProject',
     availableOptions: [
         {
@@ -38,12 +39,6 @@ const NewCommand = Command.extend({
             description: 'Automatically link the `@angular/cli` package.'
         },
         {
-            name: 'ng4',
-            type: Boolean,
-            default: false,
-            description: 'Create a project with Angular 4 in the template.'
-        },
-        {
             name: 'skip-install',
             type: Boolean,
             default: false,
@@ -63,6 +58,13 @@ const NewCommand = Command.extend({
             default: false,
             aliases: ['st'],
             description: 'Skip creating spec files.'
+        },
+        {
+            name: 'skip-e2e',
+            type: Boolean,
+            default: false,
+            aliases: ['s2'],
+            description: 'Skip creating e2e files.'
         },
         {
             name: 'skip-commit',
@@ -124,7 +126,8 @@ const NewCommand = Command.extend({
     run: function (commandOptions, rawArgs) {
         const packageName = rawArgs.shift();
         if (!packageName) {
-            return Promise.reject(new SilentError(`The "ng ${this.name}" command requires a name argument to be specified. ` +
+            return Promise.reject(new SilentError(`The "ng ${this.name}" command requires a name argument to be specified eg. ` +
+                chalk.yellow('ng new [name] ') +
                 `For more details, use "ng help".`));
         }
         validate_project_name_1.validateProjectName(packageName);

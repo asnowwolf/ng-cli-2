@@ -7,7 +7,7 @@ export interface TestOptions {
     log?: string;
     port?: number;
     reporters?: string;
-    sourcemap?: boolean;
+    sourcemaps?: boolean;
     progress?: boolean;
     config: string;
     poll?: number;

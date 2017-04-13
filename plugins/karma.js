@@ -5,6 +5,7 @@ const fs = require("fs");
 const glob = require("glob");
 const utils_1 = require("../models/webpack-configs/utils");
 const webpack_test_config_1 = require("../models/webpack-test-config");
+const karma_webpack_throw_error_1 = require("./karma-webpack-throw-error");
 const getAppFromConfig = require('../utilities/app-utils').getAppFromConfig;
 function isDirectory(path) {
     try {
@@ -39,7 +40,7 @@ const init = (config) => {
     const testConfig = Object.assign({
         environment: 'dev',
         codeCoverage: false,
-        sourcemap: true,
+        sourcemaps: true,
         progress: true,
     }, config.angularCli);
     // Add assets. This logic is mimics the one present in GlobCopyWebpackPlugin.
@@ -91,6 +92,10 @@ const init = (config) => {
             poll: testConfig.poll
         }
     };
+    // If Karma is being ran in single run mode, throw errors.
+    if (config.singleRun) {
+        webpackConfig.plugins.push(new karma_webpack_throw_error_1.KarmaWebpackThrowError());
+    }
     config.webpack = Object.assign(webpackConfig, config.webpack);
     config.webpackMiddleware = Object.assign(webpackMiddlewareConfig, config.webpackMiddleware);
     // Replace the @angular/cli preprocessor with webpack+sourcemap.

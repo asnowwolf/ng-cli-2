@@ -51,7 +51,7 @@ function getCommonConfig(wco) {
         extraPlugins.push(new ProgressPlugin({ profile: buildOptions.verbose, colors: true }));
     }
     return {
-        devtool: buildOptions.sourcemap ? 'source-map' : false,
+        devtool: buildOptions.sourcemaps ? 'source-map' : false,
         resolve: {
             extensions: ['.ts', '.js'],
             modules: [nodeModules],

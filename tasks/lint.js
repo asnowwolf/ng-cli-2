@@ -5,17 +5,13 @@ const chalk = require("chalk");
 const glob = require("glob");
 const require_project_module_1 = require("../utilities/require-project-module");
 const config_1 = require("../models/config");
-const common_tags_1 = require("common-tags");
 exports.default = Task.extend({
     run: function (commandOptions) {
         const ui = this.ui;
         const projectRoot = this.project.root;
         const lintConfigs = config_1.CliConfig.fromProject().config.lint || [];
         if (lintConfigs.length === 0) {
-            ui.writeLine(chalk.yellow(common_tags_1.oneLine `
-        No lint config(s) found.
-        If this is not intended, run "ng update".
-      `));
+            ui.writeLine(chalk.yellow('No lint configuration(s) found.'));
             return Promise.resolve(0);
         }
         const tslint = require_project_module_1.requireProjectModule(projectRoot, 'tslint');
@@ -25,10 +21,12 @@ exports.default = Task.extend({
             .map((config) => {
             const program = Linter.createProgram(config.project);
             const files = getFilesToLint(program, config, Linter);
-            const linter = new Linter({
+            const lintOptions = {
                 fix: commandOptions.fix,
                 formatter: commandOptions.format
-            }, program);
+            };
+            const lintProgram = commandOptions.typeCheck ? program : undefined;
+            const linter = new Linter(lintOptions, lintProgram);
             files.forEach((file) => {
                 const sourceFile = program.getSourceFile(file);
                 if (!sourceFile) {

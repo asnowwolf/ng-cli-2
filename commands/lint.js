@@ -15,6 +15,12 @@ exports.default = Command.extend({
             description: 'Fixes linting errors (may overwrite linted files).'
         },
         {
+            name: 'type-check',
+            type: Boolean,
+            default: false,
+            description: 'Controls the type check for linting.'
+        },
+        {
             name: 'force',
             type: Boolean,
             default: false,

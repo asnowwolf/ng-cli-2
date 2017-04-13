@@ -4,6 +4,7 @@ const path = require("path");
 const glob = require("glob");
 const webpack = require("webpack");
 const config_1 = require("../config");
+const karma_webpack_emitless_error_1 = require("../../plugins/karma-webpack-emitless-error");
 /**
  * Enumerate loaders and their dependencies from this file to let the dependency validator
  * know they are used.
@@ -37,7 +38,7 @@ function getTestConfig(testConfig) {
         });
     }
     return {
-        devtool: testConfig.sourcemap ? 'inline-source-map' : 'eval',
+        devtool: testConfig.sourcemaps ? 'inline-source-map' : 'eval',
         entry: {
             test: path.resolve(projectRoot, appConfig.root, appConfig.test)
         },
@@ -48,7 +49,8 @@ function getTestConfig(testConfig) {
             new webpack.SourceMapDevToolPlugin({
                 filename: null,
                 test: /\.(ts|js)($|\?)/i // process .js and .ts files only
-            })
+            }),
+            new karma_webpack_emitless_error_1.KarmaWebpackEmitlessError()
         ]
     };
 }

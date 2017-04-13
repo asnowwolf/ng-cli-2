@@ -1,5 +1,6 @@
 export interface LintCommandOptions {
     fix?: boolean;
+    typeCheck?: boolean;
     format?: string;
     force?: boolean;
 }
