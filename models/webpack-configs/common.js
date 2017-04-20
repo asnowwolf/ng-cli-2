@@ -71,11 +71,11 @@ function getCommonConfig(wco) {
             rules: [
                 { enforce: 'pre', test: /\.js$/, loader: 'source-map-loader', exclude: [nodeModules] },
                 { test: /\.json$/, loader: 'json-loader' },
-                { test: /\.html$/, loaders: ['html-loader', 'markup-inline-loader'] },
+                { test: /\.html$/, loaders: ['html-loader'] },
                 { test: /\.(eot|svg)$/, loader: `url-loader?name=images/[name]${hashFormat.file}.[ext]&limit=256` },
                 {
                     test: /\.(jpg|png|gif|otf|ttf|woff|woff2|cur|ani)$/,
-                    loader: `url-loader?name=images/[name]${hashFormat.file}.[ext]&limit=10000`
+                    loader: `url-loader?name=images/[name]${hashFormat.file}.[ext]&limit=1024`
                 }
             ].concat(extraRules)
         },
