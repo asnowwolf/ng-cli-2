@@ -7,6 +7,8 @@ import { WebpackConfigOptions } from '../webpack-config';
  * require('source-map-loader')
  * require('raw-loader')
  * require('script-loader')
+ * require('html-loader')
+ * require('markup-inline-loader')
  * require('json-loader')
  * require('url-loader')
  * require('file-loader')

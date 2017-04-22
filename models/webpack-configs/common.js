@@ -12,6 +12,8 @@ const ProgressPlugin = require('webpack/lib/ProgressPlugin');
  * require('source-map-loader')
  * require('raw-loader')
  * require('script-loader')
+ * require('html-loader')
+ * require('markup-inline-loader')
  * require('json-loader')
  * require('url-loader')
  * require('file-loader')
@@ -71,7 +73,7 @@ function getCommonConfig(wco) {
             rules: [
                 { enforce: 'pre', test: /\.js$/, loader: 'source-map-loader', exclude: [nodeModules] },
                 { test: /\.json$/, loader: 'json-loader' },
-                { test: /\.html$/, loaders: ['html-loader'] },
+                { test: /\.html$/, loaders: ['html-loader', 'markup-inline-loader'] },
                 { test: /\.(eot|svg)$/, loader: `url-loader?name=images/[name]${hashFormat.file}.[ext]&limit=256` },
                 {
                     test: /\.(jpg|png|gif|otf|ttf|woff|woff2|cur|ani)$/,
