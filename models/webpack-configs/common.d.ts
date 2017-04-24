@@ -9,6 +9,7 @@ import { WebpackConfigOptions } from '../webpack-config';
  * require('script-loader')
  * require('html-loader')
  * require('markup-inline-loader')
+ * require('markdown-loader')
  * require('json-loader')
  * require('url-loader')
  * require('file-loader')
