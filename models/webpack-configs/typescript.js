@@ -60,7 +60,6 @@ function _createAotPlugin(wco, options) {
         hostReplacementPaths,
         // If we don't explicitely list excludes, it will default to `['**/*.spec.ts']`.
         exclude: [],
-        skipCodeGeneration: true
     }, options));
 }
 exports.getNonAotConfig = function (wco) {

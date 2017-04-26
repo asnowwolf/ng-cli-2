@@ -68,8 +68,7 @@ exports.default = Task.extend({
             inlineTemplate: commandOptions.inlineTemplate,
             ignoredUpdateFiles: ['favicon.ico'],
             skipGit: commandOptions.skipGit,
-            skipTests: commandOptions.skipTests,
-            skipE2e: commandOptions.skipE2e
+            skipTests: commandOptions.skipTests
         };
         validate_project_name_1.validateProjectName(packageName);
         blueprintOpts.blueprint = normalizeBlueprint(blueprintOpts.blueprint);
