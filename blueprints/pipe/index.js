@@ -13,6 +13,7 @@ const findParentModule = require('../../utilities/find-parent-module').default;
 const Blueprint = require('../../ember-cli/lib/models/blueprint');
 const getFiles = Blueprint.prototype.files;
 exports.default = Blueprint.extend({
+    name: 'pipe',
     description: '',
     aliases: ['p'],
     availableOptions: [
@@ -111,7 +112,8 @@ exports.default = Blueprint.extend({
         const fullGeneratePath = path.join(this.project.root, this.generatePath);
         const moduleDir = path.parse(this.pathToModule).dir;
         const relativeDir = path.relative(moduleDir, fullGeneratePath);
-        const importPath = relativeDir ? `./${relativeDir}/${fileName}` : `./${fileName}`;
+        const normalizeRelativeDir = relativeDir.startsWith('.') ? relativeDir : `./${relativeDir}`;
+        const importPath = relativeDir ? `${normalizeRelativeDir}/${fileName}` : `./${fileName}`;
         if (!options.skipImport) {
             if (options.dryRun) {
                 this._writeStatusToUI(chalk.yellow, 'update', path.relative(this.project.root, this.pathToModule));
@@ -127,6 +129,7 @@ exports.default = Blueprint.extend({
                 return result;
             }));
             this._writeStatusToUI(chalk.yellow, 'update', path.relative(this.project.root, this.pathToModule));
+            this.addModifiedFile(this.pathToModule);
         }
         return Promise.all(returns);
     }

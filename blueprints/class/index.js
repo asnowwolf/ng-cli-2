@@ -7,6 +7,7 @@ const stringUtils = require('ember-cli-string-utils');
 const Blueprint = require('../../ember-cli/lib/models/blueprint');
 const getFiles = Blueprint.prototype.files;
 exports.default = Blueprint.extend({
+    name: 'class',
     description: '',
     aliases: ['cl'],
     availableOptions: [

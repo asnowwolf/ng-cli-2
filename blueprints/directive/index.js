@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const chalk = require("chalk");
 const path = require("path");
+const common_tags_1 = require("common-tags");
 const ast_tools_1 = require("../../lib/ast-tools");
 const config_1 = require("../../models/config");
 const app_utils_1 = require("../../utilities/app-utils");
@@ -13,6 +14,7 @@ const findParentModule = require('../../utilities/find-parent-module').default;
 const Blueprint = require('../../ember-cli/lib/models/blueprint');
 const getFiles = Blueprint.prototype.files;
 exports.default = Blueprint.extend({
+    name: 'directive',
     description: '',
     aliases: ['d'],
     availableOptions: [
@@ -116,13 +118,19 @@ exports.default = Blueprint.extend({
         };
     },
     afterInstall: function (options) {
+        const appConfig = app_utils_1.getAppFromConfig(this.options.app);
+        if (options.prefix && appConfig.prefix && appConfig.prefix !== options.prefix) {
+            console.log(chalk.yellow(common_tags_1.oneLine `You are using different prefix from app,
+       you might get lint errors. Please update "tslint.json" accordingly.`));
+        }
         const returns = [];
         const className = stringUtils.classify(`${options.entity.name}Directive`);
         const fileName = stringUtils.dasherize(`${options.entity.name}.directive`);
         const fullGeneratePath = path.join(this.project.root, this.generatePath);
         const moduleDir = path.parse(this.pathToModule).dir;
         const relativeDir = path.relative(moduleDir, fullGeneratePath);
-        const importPath = relativeDir ? `./${relativeDir}/${fileName}` : `./${fileName}`;
+        const normalizeRelativeDir = relativeDir.startsWith('.') ? relativeDir : `./${relativeDir}`;
+        const importPath = relativeDir ? `${normalizeRelativeDir}/${fileName}` : `./${fileName}`;
         if (!options.skipImport) {
             if (options.dryRun) {
                 this._writeStatusToUI(chalk.yellow, 'update', path.relative(this.project.root, this.pathToModule));
@@ -138,6 +146,7 @@ exports.default = Blueprint.extend({
                 return result;
             }));
             this._writeStatusToUI(chalk.yellow, 'update', path.relative(this.project.root, this.pathToModule));
+            this.addModifiedFile(this.pathToModule);
         }
         return Promise.all(returns);
     }

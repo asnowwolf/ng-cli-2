@@ -1,5 +1,6 @@
 import * as chalk from 'chalk';
 import * as path from 'path';
+import { oneLine } from 'common-tags';
 import { NodeHost } from '../../lib/ast-tools';
 import { CliConfig } from '../../models/config';
 import { getAppFromConfig } from '../../utilities/app-utils';
@@ -13,6 +14,7 @@ const Blueprint = require('../../ember-cli/lib/models/blueprint');
 const getFiles = Blueprint.prototype.files;
 
 export default Blueprint.extend({
+  name: 'directive',
   description: '',
   aliases: ['d'],
 
@@ -130,13 +132,20 @@ export default Blueprint.extend({
   },
 
   afterInstall: function (options: any) {
+    const appConfig = getAppFromConfig(this.options.app);
+    if (options.prefix && appConfig.prefix && appConfig.prefix !== options.prefix) {
+      console.log(chalk.yellow(oneLine`You are using different prefix from app,
+       you might get lint errors. Please update "tslint.json" accordingly.`));
+    }
+
     const returns: Array<any> = [];
     const className = stringUtils.classify(`${options.entity.name}Directive`);
     const fileName = stringUtils.dasherize(`${options.entity.name}.directive`);
     const fullGeneratePath = path.join(this.project.root, this.generatePath);
     const moduleDir = path.parse(this.pathToModule).dir;
     const relativeDir = path.relative(moduleDir, fullGeneratePath);
-    const importPath = relativeDir ? `./${relativeDir}/${fileName}` : `./${fileName}`;
+    const normalizeRelativeDir = relativeDir.startsWith('.') ? relativeDir : `./${relativeDir}`;
+    const importPath = relativeDir ? `${normalizeRelativeDir}/${fileName}` : `./${fileName}`;
 
     if (!options.skipImport) {
       if (options.dryRun) {
@@ -158,6 +167,7 @@ export default Blueprint.extend({
       this._writeStatusToUI(chalk.yellow,
         'update',
         path.relative(this.project.root, this.pathToModule));
+      this.addModifiedFile(this.pathToModule);
     }
 
     return Promise.all(returns);

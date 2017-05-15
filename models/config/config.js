@@ -28,6 +28,9 @@ class CliConfig {
         return this._config.$$alias(path, newPath);
     }
     get(jsonPath) {
+        if (!jsonPath) {
+            return this._config.$$root();
+        }
         return this._config.$$get(jsonPath);
     }
     typeOf(jsonPath) {

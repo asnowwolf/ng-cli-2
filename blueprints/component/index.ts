@@ -1,6 +1,7 @@
 import * as chalk from 'chalk';
 import * as fs from 'fs';
 import * as path from 'path';
+import { oneLine } from 'common-tags';
 import { NodeHost } from '../../lib/ast-tools';
 import { CliConfig } from '../../models/config';
 import { getAppFromConfig } from '../../utilities/app-utils';
@@ -35,6 +36,7 @@ function correctCase(options: any) {
 }
 
 export default Blueprint.extend({
+  name: 'component',
   description: '',
   aliases: ['c'],
 
@@ -218,11 +220,18 @@ export default Blueprint.extend({
   },
 
   afterInstall: function (options: any) {
+    const appConfig = getAppFromConfig(this.options.app);
+    if (options.prefix && appConfig.prefix && appConfig.prefix !== options.prefix) {
+      console.log(chalk.yellow(oneLine`You are using different prefix from app,
+       you might get lint errors. Please update "tslint.json" accordingly.`));
+    }
+
     const returns: Array<any> = [];
     const className = stringUtils.classify(`${options.entity.name}Component`);
     const fileName = stringUtils.dasherize(`${options.entity.name}.component`);
     const componentDir = path.relative(path.dirname(this.pathToModule), this.generatePath);
-    const importPath = componentDir ? `./${componentDir}/${fileName}` : `./${fileName}`;
+    const normalizeRelativeDir = componentDir.startsWith('.') ? componentDir : `./${componentDir}`;
+    const importPath = componentDir ? `${normalizeRelativeDir}/${fileName}` : `./${fileName}`;
 
     if (!options.skipImport) {
       if (options.dryRun) {
@@ -231,7 +240,17 @@ export default Blueprint.extend({
           path.relative(this.project.root, this.pathToModule));
         return;
       }
-      const preChange = fs.readFileSync(this.pathToModule, 'utf8');
+
+      let preChange: any;
+      try {
+         preChange = fs.readFileSync(this.pathToModule, 'utf8');
+      } catch (err) {
+        if (err.code === 'EISDIR') {
+          throw 'Module specified should be a file, not a directory';
+        } else {
+          throw err;
+        }
+      }
 
       returns.push(
         astUtils.addDeclarationToModule(this.pathToModule, className, importPath)
@@ -254,6 +273,7 @@ export default Blueprint.extend({
             this._writeStatusToUI(chalk.yellow,
               moduleStatus,
               path.relative(this.project.root, this.pathToModule));
+            this.addModifiedFile(this.pathToModule);
           }));
     }
 

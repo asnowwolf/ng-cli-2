@@ -39,8 +39,15 @@ function getStylesConfig(wco) {
     const baseHref = wco.buildOptions.baseHref || '';
     const deployUrl = wco.buildOptions.deployUrl || '';
     const postcssPluginCreator = function () {
+        // safe settings based on: https://github.com/ben-eb/cssnano/issues/358#issuecomment-283696193
+        const importantCommentRe = /@preserve|@license|[@#]\s*source(?:Mapping)?URL|^!/i;
+        const minimizeOptions = {
+            autoprefixer: false,
+            safe: true,
+            mergeLonghand: false,
+            discardComments: { remove: (comment) => !importantCommentRe.test(comment) }
+        };
         return [
-            autoprefixer(),
             postcssUrl({
                 url: (URL) => {
                     // Only convert root relative URLs, which CSS-Loader won't process into require().
@@ -62,8 +69,9 @@ function getStylesConfig(wco) {
                         return `/${baseHref}/${deployUrl}/${URL}`.replace(/\/\/+/g, '/');
                     }
                 }
-            })
-        ].concat(minimizeCss ? [cssnano({ safe: true, autoprefixer: false })] : []);
+            }),
+            autoprefixer(),
+        ].concat(minimizeCss ? [cssnano(minimizeOptions)] : []);
     };
     postcssPluginCreator[eject_1.postcssArgs] = {
         variableImports: {
@@ -155,34 +163,32 @@ function getStylesConfig(wco) {
                     ...commonLoaders,
                     ...use
                 ],
-                fallback: 'style-loader',
                 // publicPath needed as a workaround https://github.com/angular/angular-cli/issues/4035
                 publicPath: ''
             };
             const ret = {
                 include: globalStylePaths,
                 test,
-                use: ExtractTextPlugin.extract(extractTextPlugin)
+                use: buildOptions.extractCss ? ExtractTextPlugin.extract(extractTextPlugin)
+                    : ['style-loader', ...extractTextPlugin.use]
             };
             // Save the original options as arguments for eject.
-            ret[eject_1.pluginArgs] = extractTextPlugin;
+            if (buildOptions.extractCss) {
+                ret[eject_1.pluginArgs] = extractTextPlugin;
+            }
             return ret;
         }));
     }
     if (buildOptions.extractCss) {
+        // extract global css from js files into own css file
+        extraPlugins.push(new ExtractTextPlugin({ filename: `[name]${hashFormat.extract}.bundle.css` }));
         // suppress empty .js files in css only entry points
         extraPlugins.push(new suppress_entry_chunks_webpack_plugin_1.SuppressExtractedTextChunksWebpackPlugin());
     }
     return {
         entry: entryPoints,
         module: { rules },
-        plugins: [
-            // extract global css from js files into own css file
-            new ExtractTextPlugin({
-                filename: `[name]${hashFormat.extract}.bundle.css`,
-                disable: !buildOptions.extractCss
-            })
-        ].concat(extraPlugins)
+        plugins: [].concat(extraPlugins)
     };
 }
 exports.getStylesConfig = getStylesConfig;

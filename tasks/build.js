@@ -22,7 +22,9 @@ exports.default = Task.extend({
         if (config.project && config.project.ejected) {
             throw new SilentError('An ejected project cannot use the build command anymore.');
         }
-        rimraf.sync(path.resolve(project.root, outputPath));
+        if (runTaskOptions.deleteOutputPath) {
+            rimraf.sync(path.resolve(project.root, outputPath));
+        }
         const webpackConfig = new webpack_config_1.NgCliWebpackConfig(runTaskOptions, app).buildConfig();
         const webpackCompiler = webpack(webpackConfig);
         const statsConfig = utils_1.getWebpackStatsConfig(runTaskOptions.verbose);

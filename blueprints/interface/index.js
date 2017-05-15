@@ -6,6 +6,7 @@ const dynamic_path_parser_1 = require("../../utilities/dynamic-path-parser");
 const stringUtils = require('ember-cli-string-utils');
 const Blueprint = require('../../ember-cli/lib/models/blueprint');
 exports.default = Blueprint.extend({
+    name: 'interface',
     description: '',
     aliases: ['i'],
     anonymousOptions: [

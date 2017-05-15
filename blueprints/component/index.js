@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const chalk = require("chalk");
 const fs = require("fs");
 const path = require("path");
+const common_tags_1 = require("common-tags");
 const ast_tools_1 = require("../../lib/ast-tools");
 const config_1 = require("../../models/config");
 const app_utils_1 = require("../../utilities/app-utils");
@@ -31,6 +32,7 @@ function correctCase(options) {
     }
 }
 exports.default = Blueprint.extend({
+    name: 'component',
     description: '',
     aliases: ['c'],
     availableOptions: [
@@ -192,17 +194,34 @@ exports.default = Blueprint.extend({
         };
     },
     afterInstall: function (options) {
+        const appConfig = app_utils_1.getAppFromConfig(this.options.app);
+        if (options.prefix && appConfig.prefix && appConfig.prefix !== options.prefix) {
+            console.log(chalk.yellow(common_tags_1.oneLine `You are using different prefix from app,
+       you might get lint errors. Please update "tslint.json" accordingly.`));
+        }
         const returns = [];
         const className = stringUtils.classify(`${options.entity.name}Component`);
         const fileName = stringUtils.dasherize(`${options.entity.name}.component`);
         const componentDir = path.relative(path.dirname(this.pathToModule), this.generatePath);
-        const importPath = componentDir ? `./${componentDir}/${fileName}` : `./${fileName}`;
+        const normalizeRelativeDir = componentDir.startsWith('.') ? componentDir : `./${componentDir}`;
+        const importPath = componentDir ? `${normalizeRelativeDir}/${fileName}` : `./${fileName}`;
         if (!options.skipImport) {
             if (options.dryRun) {
                 this._writeStatusToUI(chalk.yellow, 'update', path.relative(this.project.root, this.pathToModule));
                 return;
             }
-            const preChange = fs.readFileSync(this.pathToModule, 'utf8');
+            let preChange;
+            try {
+                preChange = fs.readFileSync(this.pathToModule, 'utf8');
+            }
+            catch (err) {
+                if (err.code === 'EISDIR') {
+                    throw 'Module specified should be a file, not a directory';
+                }
+                else {
+                    throw err;
+                }
+            }
             returns.push(astUtils.addDeclarationToModule(this.pathToModule, className, importPath)
                 .then((change) => change.apply(ast_tools_1.NodeHost))
                 .then((result) => {
@@ -219,6 +238,7 @@ exports.default = Blueprint.extend({
                     moduleStatus = 'identical';
                 }
                 this._writeStatusToUI(chalk.yellow, moduleStatus, path.relative(this.project.root, this.pathToModule));
+                this.addModifiedFile(this.pathToModule);
             }));
         }
         return Promise.all(returns);
