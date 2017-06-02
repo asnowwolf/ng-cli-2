@@ -77,7 +77,13 @@ exports.default = Blueprint.extend({
     },
     normalizeEntityName: function (entityName) {
         const appConfig = app_utils_1.getAppFromConfig(this.options.app);
-        const parsedPath = dynamic_path_parser_1.dynamicPathParser(this.project, entityName, appConfig);
+        const dynamicPathOptions = {
+            project: this.project,
+            entityName,
+            appConfig,
+            dryRun: this.options.dryRun
+        };
+        const parsedPath = dynamic_path_parser_1.dynamicPathParser(dynamicPathOptions);
         this.dynamicPath = parsedPath;
         const defaultPrefix = (appConfig && appConfig.prefix) || '';
         let prefix = (this.options.prefix === 'false' || this.options.prefix === '')

@@ -57,7 +57,7 @@ function getCommonConfig(wco) {
         devtool: buildOptions.sourcemaps ? 'source-map' : false,
         resolve: {
             extensions: ['.ts', '.js'],
-            modules: [nodeModules],
+            modules: ['node_modules', nodeModules],
         },
         resolveLoader: {
             modules: [nodeModules]

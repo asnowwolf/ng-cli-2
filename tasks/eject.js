@@ -23,15 +23,17 @@ exports.pluginArgs = Symbol('plugin-args');
 exports.postcssArgs = Symbol('postcss-args');
 const pree2eNpmScript = `webdriver-manager update --standalone false --gecko false --quiet`;
 class JsonWebpackSerializer {
-    constructor(_root, _dist) {
+    constructor(_root, _dist, _appRoot) {
         this._root = _root;
         this._dist = _dist;
+        this._appRoot = _appRoot;
         this.imports = {};
         this.variableImports = {
             'path': 'path'
         };
         this.variables = {
             'nodeModules': `path.join(process.cwd(), 'node_modules')`,
+            'genDirNodeModules': `path.join(process.cwd(), '${this._appRoot}', '$$_gendir', 'node_modules')`,
         };
         this._postcssProcessed = false;
     }
@@ -338,7 +340,7 @@ class JsonWebpackSerializer {
 }
 exports.default = Task.extend({
     run: function (runTaskOptions) {
-        const project = this.cliProject;
+        const project = this.project;
         const cliConfig = config_1.CliConfig.fromProject();
         const config = cliConfig.config;
         const appConfig = app_utils_1.getAppFromConfig(runTaskOptions.app);
@@ -349,7 +351,7 @@ exports.default = Task.extend({
             throw new SilentError('Output path MUST not be project root directory!');
         }
         const webpackConfig = new webpack_config_1.NgCliWebpackConfig(runTaskOptions, appConfig).buildConfig();
-        const serializer = new JsonWebpackSerializer(process.cwd(), outputPath);
+        const serializer = new JsonWebpackSerializer(process.cwd(), outputPath, appConfig.root);
         const output = serializer.serialize(webpackConfig);
         const webpackConfigStr = `${serializer.generateVariables()}\n\nmodule.exports = ${output};\n`;
         return Promise.resolve()
@@ -373,12 +375,6 @@ exports.default = Task.extend({
             Your package.json scripts must not contain a start script as it will be overwritten.
           `);
             }
-            if (scripts['pree2e'] && scripts['prepree2e'] !== 'npm start' && !force) {
-                throw new SilentError(common_tags_1.oneLine `
-            Your package.json scripts needs to not contain a prepree2e script as it will be
-            overwritten.
-          `);
-            }
             if (scripts['pree2e'] && scripts['pree2e'] !== pree2eNpmScript && !force) {
                 throw new SilentError(common_tags_1.oneLine `
             Your package.json scripts must not contain a pree2e script as it will be
@@ -398,7 +394,6 @@ exports.default = Task.extend({
             packageJson['scripts']['build'] = 'webpack';
             packageJson['scripts']['start'] = 'webpack-dev-server --port=4200';
             packageJson['scripts']['test'] = 'karma start ./karma.conf.js';
-            packageJson['scripts']['prepree2e'] = 'npm start';
             packageJson['scripts']['pree2e'] = pree2eNpmScript;
             packageJson['scripts']['e2e'] = 'protractor ./protractor.conf.js';
             // Add new dependencies based on our dependencies.

@@ -517,7 +517,7 @@ Blueprint.prototype.install = function(options) {
     ui.writeLine(chalk.yellow('You specified the dry-run flag, so no' +
       ' changes will be written.'));
   }
-
+  
   this._normalizeEntityName(options.entity);
   this._checkForPod(options.verbose);
   this._checkInRepoAddonExists(options.inRepoAddon);
@@ -856,7 +856,7 @@ Blueprint.prototype._generateFileMapVariables = function(moduleName, locals, opt
   @return {Object}
 */
 Blueprint.prototype._locals = function(options) {
-  var packageName = options.project.name();
+  var packageName = options.project.name() || options.projectName;
   var moduleName = options.entity && options.entity.name || packageName;
   var sanitizedModuleName = moduleName.replace(/\//g, '-');
 

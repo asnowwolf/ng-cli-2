@@ -65,6 +65,9 @@ exports.default = Command.extend({
         if (!rawArgs[1]) {
             SilentError.debugOrThrow('@angular/cli/commands/generate', `The \`ng generate ${name}\` command requires a name to be specified.`);
         }
+        if (/^\d/.test(rawArgs[1])) {
+            SilentError.debugOrThrow('@angular/cli/commands/generate', `The \`ng generate ${name} ${rawArgs[1]}\` file name cannot begin with a digit.`);
+        }
         rawArgs[0] = blueprint.name;
         this.registerOptions(blueprint);
     },
@@ -86,10 +89,11 @@ exports.default = Command.extend({
         }
         const blueprint = this.blueprints.find((bp) => bp.name === name
             || (bp.aliases && bp.aliases.includes(name)));
+        const projectName = config_1.CliConfig.getValue('project.name');
         const blueprintOptions = Object.assign({ target: this.project.root, entity: {
                 name: rawArgs[1],
                 options: parseOptions(rawArgs.slice(2))
-            }, ui: this.ui, project: this.project, settings: this.settings, testing: this.testing, args: rawArgs }, commandOptions);
+            }, projectName, ui: this.ui, project: this.project, settings: this.settings, testing: this.testing, args: rawArgs }, commandOptions);
         return blueprint.install(blueprintOptions)
             .then(() => {
             const lintFix = commandOptions.lintFix !== undefined ?

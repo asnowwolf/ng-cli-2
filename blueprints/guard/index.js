@@ -43,7 +43,13 @@ exports.default = Blueprint.extend({
     },
     normalizeEntityName: function (entityName) {
         const appConfig = app_utils_1.getAppFromConfig(this.options.app);
-        const parsedPath = dynamic_path_parser_1.dynamicPathParser(this.project, entityName, appConfig);
+        const dynamicPathOptions = {
+            project: this.project,
+            entityName,
+            appConfig,
+            dryRun: this.options.dryRun
+        };
+        const parsedPath = dynamic_path_parser_1.dynamicPathParser(dynamicPathOptions);
         this.dynamicPath = parsedPath;
         return parsedPath.name;
     },
@@ -87,6 +93,10 @@ exports.default = Blueprint.extend({
             this._writeStatusToUI(chalk.yellow, 'WARNING', warningMessage);
         }
         else {
+            if (options.dryRun) {
+                this._writeStatusToUI(chalk.yellow, 'update', path.relative(this.project.root, this.pathToModule));
+                return;
+            }
             const className = stringUtils.classify(`${options.entity.name}Guard`);
             const fileName = stringUtils.dasherize(`${options.entity.name}.guard`);
             const fullGeneratePath = path.join(this.project.root, this.generatePath);

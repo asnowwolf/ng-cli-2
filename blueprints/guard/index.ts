@@ -3,7 +3,7 @@ import * as path from 'path';
 import { oneLine } from 'common-tags';
 import { NodeHost } from '../../lib/ast-tools';
 import { CliConfig } from '../../models/config';
-import { dynamicPathParser } from '../../utilities/dynamic-path-parser';
+import { dynamicPathParser, DynamicPathOptions } from '../../utilities/dynamic-path-parser';
 import { getAppFromConfig } from '../../utilities/app-utils';
 import { resolveModulePath } from '../../utilities/resolve-module-file';
 
@@ -46,7 +46,13 @@ export default Blueprint.extend({
 
   normalizeEntityName: function (entityName: string) {
     const appConfig = getAppFromConfig(this.options.app);
-    const parsedPath = dynamicPathParser(this.project, entityName, appConfig);
+    const dynamicPathOptions: DynamicPathOptions = {
+      project: this.project,
+      entityName,
+      appConfig,
+      dryRun: this.options.dryRun
+    };
+    const parsedPath = dynamicPathParser(dynamicPathOptions);
 
     this.dynamicPath = parsedPath;
     return parsedPath.name;
@@ -99,6 +105,13 @@ export default Blueprint.extend({
       `;
       this._writeStatusToUI(chalk.yellow, 'WARNING', warningMessage);
     } else {
+      if (options.dryRun) {
+        this._writeStatusToUI(chalk.yellow,
+          'update',
+          path.relative(this.project.root, this.pathToModule));
+        return;
+      }
+
       const className = stringUtils.classify(`${options.entity.name}Guard`);
       const fileName = stringUtils.dasherize(`${options.entity.name}.guard`);
       const fullGeneratePath = path.join(this.project.root, this.generatePath);
