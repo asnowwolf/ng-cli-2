@@ -53,16 +53,24 @@ function getCommonConfig(wco) {
     if (buildOptions.progress) {
         extraPlugins.push(new ProgressPlugin({ profile: buildOptions.verbose, colors: true }));
     }
+    if (buildOptions.sourcemaps) {
+        extraPlugins.push(new webpack.SourceMapDevToolPlugin({
+            filename: '[file].map[query]',
+            moduleFilenameTemplate: '[resource-path]',
+            fallbackModuleFilenameTemplate: '[resource-path]?[hash]',
+            sourceRoot: 'webpack:///'
+        }));
+    }
     return {
-        devtool: buildOptions.sourcemaps ? 'source-map' : false,
         resolve: {
             extensions: ['.ts', '.js'],
             modules: ['node_modules', nodeModules],
+            symlinks: !buildOptions.preserveSymlinks
         },
         resolveLoader: {
-            modules: [nodeModules]
+            modules: [nodeModules, 'node_modules']
         },
-        context: projectRoot,
+        context: __dirname,
         entry: entryPoints,
         output: {
             path: path.resolve(projectRoot, buildOptions.outputPath),
@@ -78,7 +86,7 @@ function getCommonConfig(wco) {
                 { test: /\.md$/, loaders: ['html-loader', 'markup-inline-loader', 'markdown-loader'] },
                 { test: /\.(eot|svg)$/, loader: `url-loader?name=images/[name]${hashFormat.file}.[ext]&limit=256` },
                 {
-                    test: /\.(jpg|png|gif|otf|ttf|woff|woff2|cur|ani)$/,
+                    test: /\.(jpg|png|webp|gif|otf|ttf|woff|woff2|cur|ani)$/,
                     loader: `url-loader?name=images/[name]${hashFormat.file}.[ext]&limit=1024`
                 }
             ].concat(extraRules)

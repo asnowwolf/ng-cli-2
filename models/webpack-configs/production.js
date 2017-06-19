@@ -7,6 +7,7 @@ const semver = require("semver");
 const common_tags_1 = require("common-tags");
 const static_asset_1 = require("../../plugins/static-asset");
 const glob_copy_webpack_plugin_1 = require("../../plugins/glob-copy-webpack-plugin");
+const licensePlugin = require('license-webpack-plugin');
 exports.getProdConfig = function (wco) {
     const { projectRoot, buildOptions, appConfig } = wco;
     let extraPlugins = [];
@@ -66,6 +67,12 @@ exports.getProdConfig = function (wco) {
         // TODO(alxhub): inline this script somehow.
         entryPoints['sw-register'] = [registerPath];
     }
+    if (buildOptions.extractLicenses) {
+        extraPlugins.push(new licensePlugin({
+            pattern: /^(MIT|ISC|BSD.*)$/,
+            suppressErrors: true
+        }));
+    }
     return {
         entry: entryPoints,
         plugins: [
@@ -76,7 +83,8 @@ exports.getProdConfig = function (wco) {
             new webpack.optimize.UglifyJsPlugin({
                 mangle: { screw_ie8: true },
                 compress: { screw_ie8: true, warnings: buildOptions.verbose },
-                sourceMap: buildOptions.sourcemaps
+                sourceMap: buildOptions.sourcemaps,
+                comments: false
             })
         ].concat(extraPlugins)
     };
