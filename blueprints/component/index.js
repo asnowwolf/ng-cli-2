@@ -1,62 +1,137 @@
 "use strict";
-var path = require('path');
-var fs = require('fs');
-var chalk = require('chalk');
-var Blueprint = require('../../ember-cli/lib/models/blueprint');
-var dynamicPathParser = require('../../utilities/dynamic-path-parser');
-var findParentModule = require('../../utilities/find-parent-module').default;
-var getFiles = Blueprint.prototype.files;
-var stringUtils = require('ember-cli-string-utils');
-var astUtils = require('../../utilities/ast-utils');
-var NodeHost = require('@angular-cli/ast-tools').NodeHost;
 Object.defineProperty(exports, "__esModule", { value: true });
+const chalk = require("chalk");
+const fs = require("fs");
+const path = require("path");
+const common_tags_1 = require("common-tags");
+const ast_tools_1 = require("../../lib/ast-tools");
+const config_1 = require("../../models/config");
+const app_utils_1 = require("../../utilities/app-utils");
+const dynamic_path_parser_1 = require("../../utilities/dynamic-path-parser");
+const resolve_module_file_1 = require("../../utilities/resolve-module-file");
+const Blueprint = require('../../ember-cli/lib/models/blueprint');
+const findParentModule = require('../../utilities/find-parent-module').default;
+const getFiles = Blueprint.prototype.files;
+const stringUtils = require('ember-cli-string-utils');
+const astUtils = require('../../utilities/ast-utils');
+const viewEncapsulationMap = {
+    'emulated': 'Emulated',
+    'native': 'Native',
+    'none': 'None'
+};
+const changeDetectionMap = {
+    'default': 'Default',
+    'onpush': 'OnPush'
+};
+function correctCase(options) {
+    if (options.viewEncapsulation) {
+        options.viewEncapsulation = viewEncapsulationMap[options.viewEncapsulation.toLowerCase()];
+    }
+    if (options.changeDetection) {
+        options.changeDetection = changeDetectionMap[options.changeDetection.toLowerCase()];
+    }
+}
 exports.default = Blueprint.extend({
+    name: 'component',
     description: '',
+    aliases: ['c'],
     availableOptions: [
-        { name: 'flat', type: Boolean, default: false },
-        { name: 'inline-template', type: Boolean, aliases: ['it'] },
-        { name: 'inline-style', type: Boolean, aliases: ['is'] },
-        { name: 'prefix', type: String, default: null },
-        { name: 'spec', type: Boolean },
-        { name: 'view-encapsulation', type: String, aliases: ['ve'] },
-        { name: 'change-detection', type: String, aliases: ['cd'] },
-        { name: 'skip-import', type: Boolean, default: false },
-        { name: 'module', type: String, aliases: ['m'] },
-        { name: 'export', type: Boolean, default: false }
+        {
+            name: 'flat',
+            type: Boolean,
+            description: 'Flag to indicate if a dir is created.'
+        },
+        {
+            name: 'inline-template',
+            type: Boolean,
+            aliases: ['it'],
+            description: 'Specifies if the template will be in the ts file.'
+        },
+        {
+            name: 'inline-style',
+            type: Boolean,
+            aliases: ['is'],
+            description: 'Specifies if the style will be in the ts file.'
+        },
+        {
+            name: 'prefix',
+            type: String,
+            default: null,
+            description: 'Specifies whether to use the prefix.'
+        },
+        {
+            name: 'spec',
+            type: Boolean,
+            description: 'Specifies if a spec file is generated.'
+        },
+        {
+            name: 'view-encapsulation',
+            type: String,
+            aliases: ['ve'],
+            description: 'Specifies the view encapsulation strategy.'
+        },
+        {
+            name: 'change-detection',
+            type: String,
+            aliases: ['cd'],
+            description: 'Specifies the change detection strategy.'
+        },
+        {
+            name: 'skip-import',
+            type: Boolean,
+            default: false,
+            description: 'Allows for skipping the module import.'
+        },
+        {
+            name: 'module',
+            type: String,
+            aliases: ['m'],
+            description: 'Allows specification of the declaring module.'
+        },
+        {
+            name: 'export',
+            type: Boolean,
+            default: false,
+            description: 'Specifies if declaring module exports the component.'
+        },
+        {
+            name: 'app',
+            type: String,
+            aliases: ['a'],
+            description: 'Specifies app name to use.'
+        }
     ],
     beforeInstall: function (options) {
+        const appConfig = app_utils_1.getAppFromConfig(this.options.app);
         if (options.module) {
-            // Resolve path to module
-            var modulePath = options.module.endsWith('.ts') ? options.module : options.module + ".ts";
-            var parsedPath = dynamicPathParser(this.project, modulePath);
-            this.pathToModule = path.join(this.project.root, parsedPath.dir, parsedPath.base);
-            if (!fs.existsSync(this.pathToModule)) {
-                throw 'Module specified does not exist';
-            }
+            this.pathToModule =
+                resolve_module_file_1.resolveModulePath(options.module, this.project, this.project.root, appConfig);
         }
         else {
             try {
-                this.pathToModule = findParentModule(this.project, this.dynamicPath.dir);
+                this.pathToModule = findParentModule(this.project.root, appConfig.root, this.generatePath);
             }
             catch (e) {
                 if (!options.skipImport) {
-                    throw "Error locating module for declaration\n\t" + e;
+                    throw `Error locating module for declaration\n\t${e}`;
                 }
             }
         }
     },
     normalizeEntityName: function (entityName) {
-        var parsedPath = dynamicPathParser(this.project, entityName);
+        const appConfig = app_utils_1.getAppFromConfig(this.options.app);
+        const dynamicPathOptions = {
+            project: this.project,
+            entityName,
+            appConfig,
+            dryRun: this.options.dryRun
+        };
+        const parsedPath = dynamic_path_parser_1.dynamicPathParser(dynamicPathOptions);
         this.dynamicPath = parsedPath;
-        var defaultPrefix = '';
-        if (this.project.ngConfig &&
-            this.project.ngConfig.apps[0] &&
-            this.project.ngConfig.apps[0].prefix) {
-            defaultPrefix = this.project.ngConfig.apps[0].prefix;
-        }
-        var prefix = (this.options.prefix === 'false' || this.options.prefix === '')
+        const defaultPrefix = (appConfig && appConfig.prefix) || '';
+        let prefix = (this.options.prefix === 'false' || this.options.prefix === '')
             ? '' : (this.options.prefix || defaultPrefix);
-        prefix = prefix && prefix + "-";
+        prefix = prefix && `${prefix}-`;
         this.selector = stringUtils.dasherize(prefix + parsedPath.name);
         if (this.selector.indexOf('-') === -1) {
             this._writeStatusToUI(chalk.yellow, 'WARNING', 'selectors should contain a dash');
@@ -64,27 +139,20 @@ exports.default = Blueprint.extend({
         return parsedPath.name;
     },
     locals: function (options) {
-        this.styleExt = 'css';
-        if (this.project.ngConfig &&
-            this.project.ngConfig.defaults &&
-            this.project.ngConfig.defaults.styleExt) {
-            this.styleExt = this.project.ngConfig.defaults.styleExt;
-        }
+        this.styleExt = config_1.CliConfig.getValue('defaults.styleExt') || 'css';
         options.inlineStyle = options.inlineStyle !== undefined ?
-            options.inlineStyle :
-            this.project.ngConfigObj.get('defaults.inline.style');
+            options.inlineStyle : config_1.CliConfig.getValue('defaults.component.inlineStyle');
         options.inlineTemplate = options.inlineTemplate !== undefined ?
-            options.inlineTemplate :
-            this.project.ngConfigObj.get('defaults.inline.template');
+            options.inlineTemplate : config_1.CliConfig.getValue('defaults.component.inlineTemplate');
+        options.flat = options.flat !== undefined ?
+            options.flat : config_1.CliConfig.getValue('defaults.component.flat');
         options.spec = options.spec !== undefined ?
-            options.spec :
-            this.project.ngConfigObj.get('defaults.spec.component');
+            options.spec : config_1.CliConfig.getValue('defaults.component.spec');
         options.viewEncapsulation = options.viewEncapsulation !== undefined ?
-            options.viewEncapsulation :
-            this.project.ngConfigObj.get('defaults.viewEncapsulation');
+            options.viewEncapsulation : config_1.CliConfig.getValue('defaults.component.viewEncapsulation');
         options.changeDetection = options.changeDetection !== undefined ?
-            options.changeDetection :
-            this.project.ngConfigObj.get('defaults.changeDetection');
+            options.changeDetection : config_1.CliConfig.getValue('defaults.component.changeDetection');
+        correctCase(options);
         return {
             dynamicPath: this.dynamicPath.dir.replace(this.dynamicPath.appRoot, ''),
             flat: options.flat,
@@ -100,60 +168,89 @@ exports.default = Blueprint.extend({
         };
     },
     files: function () {
-        var fileList = getFiles.call(this);
+        let fileList = getFiles.call(this);
         if (this.options && this.options.inlineTemplate) {
-            fileList = fileList.filter(function (p) { return p.indexOf('.html') < 0; });
+            fileList = fileList.filter(p => p.indexOf('.html') < 0);
         }
         if (this.options && this.options.inlineStyle) {
-            fileList = fileList.filter(function (p) { return p.indexOf('.__styleext__') < 0; });
+            fileList = fileList.filter(p => p.indexOf('.__styleext__') < 0);
         }
         if (this.options && !this.options.spec) {
-            fileList = fileList.filter(function (p) { return p.indexOf('__name__.component.spec.ts') < 0; });
+            fileList = fileList.filter(p => p.indexOf('__name__.component.spec.ts') < 0);
         }
         return fileList;
     },
     fileMapTokens: function (options) {
-        var _this = this;
+        const appConfig = app_utils_1.getAppFromConfig(this.options.app);
         // Return custom template variables here.
         return {
-            __path__: function () {
-                var dir = _this.dynamicPath.dir;
+            __path__: () => {
+                let dir = this.dynamicPath.dir;
                 if (!options.locals.flat) {
                     dir += path.sep + options.dasherizedModuleName;
                 }
-                var srcDir = _this.project.ngConfig.apps[0].root;
-                _this.appDir = dir.substr(dir.indexOf(srcDir) + srcDir.length);
-                _this.generatePath = dir;
+                const srcDir = appConfig.root;
+                this.appDir = dir.substr(dir.indexOf(srcDir) + srcDir.length);
+                this.generatePath = dir;
                 return dir;
             },
-            __styleext__: function () {
-                return _this.styleExt;
+            __styleext__: () => {
+                return this.styleExt;
             }
         };
     },
     afterInstall: function (options) {
-        var _this = this;
-        if (options.dryRun) {
-            return;
+        const appConfig = app_utils_1.getAppFromConfig(this.options.app);
+        if (options.prefix && appConfig.prefix && appConfig.prefix !== options.prefix) {
+            this._writeStatusToUI(chalk.yellow, 'WARNING', common_tags_1.oneLine `
+        You are using a different prefix than the app ['${appConfig.prefix}']
+        and may receive lint failures.
+        Please verify/update 'tslint.json' accordingly.
+      `);
         }
-        var returns = [];
-        var className = stringUtils.classify(options.entity.name + "Component");
-        var fileName = stringUtils.dasherize(options.entity.name + ".component");
-        var componentDir = path.relative(path.dirname(this.pathToModule), this.generatePath);
-        var importPath = componentDir ? "./" + componentDir + "/" + fileName : "./" + fileName;
+        const returns = [];
+        const className = stringUtils.classify(`${options.entity.name}Component`);
+        const fileName = stringUtils.dasherize(`${options.entity.name}.component`);
+        const componentDir = path.relative(path.dirname(this.pathToModule), this.generatePath);
+        const normalizeRelativeDir = componentDir.startsWith('.') ? componentDir : `./${componentDir}`;
+        const importPath = componentDir ? `${normalizeRelativeDir}/${fileName}` : `./${fileName}`;
         if (!options.skipImport) {
+            if (options.dryRun) {
+                this._writeStatusToUI(chalk.yellow, 'update', path.relative(this.project.root, this.pathToModule));
+                return;
+            }
+            let preChange;
+            try {
+                preChange = fs.readFileSync(this.pathToModule, 'utf8');
+            }
+            catch (err) {
+                if (err.code === 'EISDIR') {
+                    throw 'Module specified should be a file, not a directory';
+                }
+                else {
+                    throw err;
+                }
+            }
             returns.push(astUtils.addDeclarationToModule(this.pathToModule, className, importPath)
-                .then(function (change) { return change.apply(NodeHost); })
-                .then(function (result) {
+                .then((change) => change.apply(ast_tools_1.NodeHost))
+                .then((result) => {
                 if (options.export) {
-                    return astUtils.addExportToModule(_this.pathToModule, className, importPath)
-                        .then(function (change) { return change.apply(NodeHost); });
+                    return astUtils.addExportToModule(this.pathToModule, className, importPath)
+                        .then((change) => change.apply(ast_tools_1.NodeHost));
                 }
                 return result;
+            })
+                .then(() => {
+                const postChange = fs.readFileSync(this.pathToModule, 'utf8');
+                let moduleStatus = 'update';
+                if (postChange === preChange) {
+                    moduleStatus = 'identical';
+                }
+                this._writeStatusToUI(chalk.yellow, moduleStatus, path.relative(this.project.root, this.pathToModule));
+                this.addModifiedFile(this.pathToModule);
             }));
-            this._writeStatusToUI(chalk.yellow, 'update', path.relative(this.project.root, this.pathToModule));
         }
         return Promise.all(returns);
     }
 });
-//# sourceMappingURL=/Users/twer/dev/sdk/angular-cli/packages/@angular/cli/blueprints/component/index.js.map
+//# sourceMappingURL=/users/wzc/dev/angular-cli/blueprints/component/index.js.map

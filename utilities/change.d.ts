@@ -1,1 +1,1 @@
-export { Change, NoopChange, MultiChange, InsertChange, RemoveChange, ReplaceChange } from '@angular-cli/ast-tools';
+export { Change, NoopChange, MultiChange, InsertChange, RemoveChange, ReplaceChange } from '../lib/ast-tools';

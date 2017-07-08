@@ -1,40 +1,79 @@
 "use strict";
-var fs = require('fs');
-var path = require('path');
-var glob = require('glob');
-var denodeify = require('denodeify');
-var globPromise = denodeify(glob);
-var statPromise = denodeify(fs.stat);
-var GlobCopyWebpackPlugin = (function () {
-    function GlobCopyWebpackPlugin(options) {
+Object.defineProperty(exports, "__esModule", { value: true });
+const fs = require("fs");
+const path = require("path");
+const glob = require("glob");
+const denodeify = require("denodeify");
+const flattenDeep = require('lodash/flattenDeep');
+const globPromise = denodeify(glob);
+const statPromise = denodeify(fs.stat);
+function isDirectory(path) {
+    try {
+        return fs.statSync(path).isDirectory();
+    }
+    catch (_) {
+        return false;
+    }
+}
+// Adds an asset to the compilation assets;
+function addAsset(compilation, asset) {
+    const realPath = path.resolve(asset.originPath, asset.relativePath);
+    // Make sure that asset keys use forward slashes, otherwise webpack dev server
+    const servedPath = path.join(asset.destinationPath, asset.relativePath).replace(/\\/g, '/');
+    // Don't re-add existing assets.
+    if (compilation.assets[servedPath]) {
+        return Promise.resolve();
+    }
+    // Read file and add it to assets;
+    return statPromise(realPath)
+        .then((stat) => compilation.assets[servedPath] = {
+        size: () => stat.size,
+        source: () => fs.readFileSync(realPath)
+    });
+}
+class GlobCopyWebpackPlugin {
+    constructor(options) {
         this.options = options;
     }
-    GlobCopyWebpackPlugin.prototype.apply = function (compiler) {
-        var _a = this.options, patterns = _a.patterns, globOptions = _a.globOptions;
-        var context = globOptions.cwd || compiler.options.context;
-        // convert dir patterns to globs
-        patterns = patterns.map(function (pattern) { return fs.statSync(path.resolve(context, pattern)).isDirectory()
-            ? pattern += '/**/*'
-            : pattern; });
-        // force nodir option, since we can't add dirs to assets
+    apply(compiler) {
+        let { patterns, globOptions } = this.options;
+        const defaultCwd = globOptions.cwd || compiler.options.context;
+        // Force nodir option, since we can't add dirs to assets.
         globOptions.nodir = true;
-        compiler.plugin('emit', function (compilation, cb) {
-            var globs = patterns.map(function (pattern) { return globPromise(pattern, globOptions); });
-            var addAsset = function (relPath) { return compilation.assets[relPath]
-                ? Promise.resolve()
-                : statPromise(path.resolve(context, relPath))
-                    .then(function (stat) { return compilation.assets[relPath] = {
-                    size: function () { return stat.size; },
-                    source: function () { return fs.readFileSync(path.resolve(context, relPath)); }
-                }; }); };
-            Promise.all(globs)
-                .then(function (globResults) { return [].concat.apply([], globResults); })
-                .then(function (relPaths) { return relPaths.forEach(function (relPath) { return addAsset(relPath); }); })
-                .catch(function (err) { return compilation.errors.push(err); })
-                .then(cb);
+        // Process patterns.
+        patterns = patterns.map(pattern => {
+            // Convert all string patterns to Pattern type.
+            pattern = typeof pattern === 'string' ? { glob: pattern } : pattern;
+            // Add defaults
+            // Input is always resolved relative to the defaultCwd (appRoot)
+            pattern.input = path.resolve(defaultCwd, pattern.input || '');
+            pattern.output = pattern.output || '';
+            pattern.glob = pattern.glob || '';
+            // Convert dir patterns to globs.
+            if (isDirectory(path.resolve(pattern.input, pattern.glob))) {
+                pattern.glob = pattern.glob + '/**/*';
+            }
+            return pattern;
         });
-    };
-    return GlobCopyWebpackPlugin;
-}());
+        compiler.plugin('emit', (compilation, cb) => {
+            // Create an array of promises for each pattern glob
+            const globs = patterns.map((pattern) => new Promise((resolve, reject) => 
+            // Individual patterns can override cwd
+            globPromise(pattern.glob, Object.assign({}, globOptions, { cwd: pattern.input }))
+                .then((globResults) => globResults.map(res => ({
+                originPath: pattern.input,
+                destinationPath: pattern.output,
+                relativePath: res
+            })))
+                .then((asset) => resolve(asset))
+                .catch(reject)));
+            // Wait for all globs.
+            Promise.all(globs)
+                .then(assets => flattenDeep(assets))
+                .then(assets => Promise.all(assets.map((asset) => addAsset(compilation, asset))))
+                .then(() => cb());
+        });
+    }
+}
 exports.GlobCopyWebpackPlugin = GlobCopyWebpackPlugin;
-//# sourceMappingURL=/Users/twer/dev/sdk/angular-cli/packages/@angular/cli/plugins/glob-copy-webpack-plugin.js.map
+//# sourceMappingURL=/users/wzc/dev/angular-cli/plugins/glob-copy-webpack-plugin.js.map

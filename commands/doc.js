@@ -1,22 +1,31 @@
 "use strict";
-var Command = require('../ember-cli/lib/models/command');
-var doc_1 = require('../tasks/doc');
-var DocCommand = Command.extend({
+Object.defineProperty(exports, "__esModule", { value: true });
+const Command = require('../ember-cli/lib/models/command');
+const doc_1 = require("../tasks/doc");
+const DocCommand = Command.extend({
     name: 'doc',
     description: 'Opens the official Angular documentation for a given keyword.',
     works: 'everywhere',
+    availableOptions: [
+        {
+            name: 'search',
+            aliases: ['s'],
+            type: Boolean,
+            default: false,
+            description: 'Search docs instead of api.'
+        }
+    ],
     anonymousOptions: [
         '<keyword>'
     ],
     run: function (commandOptions, rawArgs) {
-        var keyword = rawArgs[0];
-        var docTask = new doc_1.DocTask({
+        const keyword = rawArgs[0];
+        const docTask = new doc_1.DocTask({
             ui: this.ui,
             project: this.project
         });
-        return docTask.run(keyword);
+        return docTask.run(keyword, commandOptions.search);
     }
 });
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = DocCommand;
-//# sourceMappingURL=/Users/twer/dev/sdk/angular-cli/packages/@angular/cli/commands/doc.js.map
+//# sourceMappingURL=/users/wzc/dev/angular-cli/commands/doc.js.map

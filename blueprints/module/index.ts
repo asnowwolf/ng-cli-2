@@ -1,37 +1,91 @@
-const path = require('path');
-const Blueprint   = require('../../ember-cli/lib/models/blueprint');
-const dynamicPathParser = require('../../utilities/dynamic-path-parser');
+import * as chalk from 'chalk';
+import * as path from 'path';
+import { oneLine } from 'common-tags';
+import { NodeHost } from '../../lib/ast-tools';
+import { CliConfig } from '../../models/config';
+import { getAppFromConfig } from '../../utilities/app-utils';
+import { resolveModulePath } from '../../utilities/resolve-module-file';
+import { dynamicPathParser, DynamicPathOptions } from '../../utilities/dynamic-path-parser';
+
+const stringUtils = require('ember-cli-string-utils');
+const Blueprint = require('../../ember-cli/lib/models/blueprint');
+const astUtils = require('../../utilities/ast-utils');
 const getFiles = Blueprint.prototype.files;
 
 export default Blueprint.extend({
+  name: 'module',
   description: '',
+  aliases: ['m'],
 
   availableOptions: [
-    { name: 'spec', type: Boolean },
-    { name: 'routing', type: Boolean, default: false }
+    {
+      name: 'spec',
+      type: Boolean,
+      description: 'Specifies if a spec file is generated.'
+    },
+    {
+      name: 'flat',
+      type: Boolean,
+      description: 'Flag to indicate if a dir is created.'
+    },
+    {
+      name: 'routing',
+      type: Boolean,
+      default: false,
+      description: 'Specifies if a routing module file should be generated.'
+    },
+    {
+      name: 'app',
+      type: String,
+      aliases: ['a'],
+      description: 'Specifies app name to use.'
+    },
+    {
+      name: 'module',
+      type: String, aliases: ['m'],
+      description: 'Specifies where the module should be imported.'
+    }
   ],
+
+  beforeInstall: function(options: any) {
+    if (options.module) {
+      const appConfig = getAppFromConfig(this.options.app);
+      this.pathToModule =
+        resolveModulePath(options.module, this.project, this.project.root, appConfig);
+    }
+  },
 
   normalizeEntityName: function (entityName: string) {
     this.entityName = entityName;
-    const parsedPath = dynamicPathParser(this.project, entityName);
+    const appConfig = getAppFromConfig(this.options.app);
+    const dynamicPathOptions: DynamicPathOptions = {
+      project: this.project,
+      entityName,
+      appConfig,
+      dryRun: this.options.dryRun
+    };
+    const parsedPath = dynamicPathParser(dynamicPathOptions);
 
     this.dynamicPath = parsedPath;
     return parsedPath.name;
   },
 
   locals: function (options: any) {
+    options.flat = options.flat !== undefined ?
+      options.flat : CliConfig.getValue('defaults.module.flat');
+
     options.spec = options.spec !== undefined ?
-      options.spec :
-      this.project.ngConfigObj.get('defaults.spec.module');
+      options.spec : CliConfig.getValue('defaults.module.spec');
 
     return {
       dynamicPath: this.dynamicPath.dir,
+      flat: options.flat,
       spec: options.spec,
       routing: options.routing
     };
   },
 
-  files: function() {
+  files: function () {
     let fileList = getFiles.call(this) as Array<string>;
 
     if (!this.options || !this.options.spec) {
@@ -49,35 +103,43 @@ export default Blueprint.extend({
     this.dasherizedModuleName = options.dasherizedModuleName;
     return {
       __path__: () => {
-        this.generatePath = this.dynamicPath.dir
-          + path.sep
-          + options.dasherizedModuleName;
+        this.generatePath = this.dynamicPath.dir;
+        if (!options.locals.flat) {
+          this.generatePath += path.sep + options.dasherizedModuleName;
+        }
         return this.generatePath;
       }
     };
   },
 
-  afterInstall: function (options: any) {
-    if (this.options && this.options.routing) {
+  afterInstall(options: any) {
+    const returns: Array<any> = [];
 
-      // Component folder needs to be `/{moduleName}/{ComponentName}`
-      // Note that we are using `flat`, so no extra dir will be created
-      // We need the leading `/` so the component path resolution work for both cases below:
-      // 1. If module name has no path (no `/`), that's going to be `/mod-name/mod-name`
-      //      as `this.dynamicPath.dir` will be the same as `this.dynamicPath.appRoot`
-      // 2. If it does have `/` (like `parent/mod-name`), it'll be `/parent/mod-name/mod-name`
-      //      as `this.dynamicPath.dir` minus `this.dynamicPath.appRoot` will be `/parent`
-      const moduleDir = this.dynamicPath.dir.replace(this.dynamicPath.appRoot, '')
-                      + path.sep + this.dasherizedModuleName;
-      options.entity.name = moduleDir + path.sep + this.dasherizedModuleName;
-      options.flat = true;
-
-      options.route = false;
-      options.inlineTemplate = false;
-      options.inlineStyle = false;
-      options.prefix = null;
-      options.spec = true;
-      return Blueprint.load(path.join(__dirname, '../component')).install(options);
+    if (!this.pathToModule) {
+      const warningMessage = oneLine`
+        Module is generated but not provided,
+        it must be provided to be used
+      `;
+      this._writeStatusToUI(chalk.yellow, 'WARNING', warningMessage);
+    } else {
+      let className = stringUtils.classify(`${options.entity.name}Module`);
+      let fileName = stringUtils.dasherize(`${options.entity.name}.module`);
+      if (options.routing) {
+        className = stringUtils.classify(`${options.entity.name}RoutingModule`);
+        fileName = stringUtils.dasherize(`${options.entity.name}-routing.module`);
+      }
+      const fullGeneratePath = path.join(this.project.root, this.generatePath);
+      const moduleDir = path.parse(this.pathToModule).dir;
+      const relativeDir = path.relative(moduleDir, fullGeneratePath);
+      const importPath = relativeDir ? `./${relativeDir}/${fileName}` : `./${fileName}`;
+      returns.push(
+        astUtils.addImportToModule(this.pathToModule, className, importPath)
+          .then((change: any) => change.apply(NodeHost)));
+      this._writeStatusToUI(chalk.yellow,
+                            'update',
+                            path.relative(this.project.root, this.pathToModule));
     }
+
+    return Promise.all(returns);
   }
 });

@@ -1,78 +1,100 @@
 "use strict";
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
-var config_1 = require('./config/config');
-var common_tags_1 = require('common-tags');
-var chalk = require('chalk');
-var fs = require('fs');
-var path = require('path');
-exports.CLI_CONFIG_FILE_NAME = 'angular-cli.json';
-function _findUp(name, from) {
-    var currentDir = from;
-    while (currentDir && currentDir !== path.parse(currentDir).root) {
-        var p = path.join(currentDir, name);
-        if (fs.existsSync(p)) {
-            return p;
-        }
-        var nodeModuleP = path.join(currentDir, 'node_modules');
-        if (fs.existsSync(nodeModuleP)) {
-            return null;
-        }
-        currentDir = path.dirname(currentDir);
-    }
-    return null;
-}
-function getUserHome() {
-    return process.env[(process.platform.startsWith('win')) ? 'USERPROFILE' : 'HOME'];
-}
-var CliConfig = (function (_super) {
-    __extends(CliConfig, _super);
-    function CliConfig() {
-        _super.apply(this, arguments);
-    }
-    CliConfig.configFilePath = function (projectPath) {
-        // Find the configuration, either where specified, in the angular-cli project
+Object.defineProperty(exports, "__esModule", { value: true });
+const config_1 = require("./config/config");
+const common_tags_1 = require("common-tags");
+const chalk = require("chalk");
+const fs = require("fs");
+const path = require("path");
+const os_1 = require("os");
+const find_up_1 = require("../utilities/find-up");
+exports.CLI_CONFIG_FILE_NAME = '.angular-cli.json';
+const CLI_CONFIG_FILE_NAME_ALT = 'angular-cli.json';
+const configCacheMap = new Map();
+class CliConfig extends config_1.CliConfig {
+    static configFilePath(projectPath) {
+        const configNames = [exports.CLI_CONFIG_FILE_NAME, CLI_CONFIG_FILE_NAME_ALT];
+        // Find the configuration, either where specified, in the Angular CLI project
         // (if it's in node_modules) or from the current process.
-        return (projectPath && _findUp(exports.CLI_CONFIG_FILE_NAME, projectPath))
-            || _findUp(exports.CLI_CONFIG_FILE_NAME, process.cwd())
-            || _findUp(exports.CLI_CONFIG_FILE_NAME, __dirname);
-    };
-    CliConfig.fromGlobal = function () {
-        var globalConfigPath = path.join(getUserHome(), exports.CLI_CONFIG_FILE_NAME);
-        var cliConfig = config_1.CliConfig.fromConfigPath(globalConfigPath);
-        var aliases = [
-            cliConfig.alias('apps.0.root', 'defaults.sourceDir'),
-            cliConfig.alias('apps.0.prefix', 'defaults.prefix')
-        ];
-        // If any of them returned true, output a deprecation warning.
-        if (aliases.some(function (x) { return !!x; })) {
-            console.error(chalk.yellow((_a = ["\n        The \"defaults.prefix\" and \"defaults.sourceDir\" properties of angular-cli.json\n        are deprecated in favor of \"apps[0].root\" and \"apps[0].prefix\".\n\n        Please update in order to avoid errors in future versions of angular-cli.\n      "], _a.raw = ["\n        The \"defaults.prefix\" and \"defaults.sourceDir\" properties of angular-cli.json\n        are deprecated in favor of \"apps[0].root\" and \"apps[0].prefix\".\\n\n        Please update in order to avoid errors in future versions of angular-cli.\n      "], common_tags_1.oneLine(_a))));
+        return (projectPath && find_up_1.findUp(configNames, projectPath))
+            || find_up_1.findUp(configNames, process.cwd())
+            || find_up_1.findUp(configNames, __dirname);
+    }
+    static getValue(jsonPath) {
+        let value;
+        const projectConfig = CliConfig.fromProject();
+        if (projectConfig) {
+            value = projectConfig.get(jsonPath);
         }
+        else {
+            const globalConfig = CliConfig.fromGlobal();
+            if (globalConfig) {
+                value = globalConfig.get(jsonPath);
+            }
+        }
+        return value;
+    }
+    static globalConfigFilePath() {
+        const globalConfigPath = path.join(os_1.homedir(), exports.CLI_CONFIG_FILE_NAME);
+        if (fs.existsSync(globalConfigPath)) {
+            return globalConfigPath;
+        }
+        const altGlobalConfigPath = path.join(os_1.homedir(), CLI_CONFIG_FILE_NAME_ALT);
+        if (fs.existsSync(altGlobalConfigPath)) {
+            return altGlobalConfigPath;
+        }
+        return globalConfigPath;
+    }
+    static fromGlobal() {
+        const globalConfigPath = this.globalConfigFilePath();
+        if (configCacheMap.has(globalConfigPath)) {
+            return configCacheMap.get(globalConfigPath);
+        }
+        const cliConfig = config_1.CliConfig.fromConfigPath(globalConfigPath);
+        CliConfig.addAliases(cliConfig);
+        configCacheMap.set(globalConfigPath, cliConfig);
         return cliConfig;
-        var _a;
-    };
-    CliConfig.fromProject = function () {
-        var configPath = this.configFilePath();
-        var globalConfigPath = path.join(getUserHome(), exports.CLI_CONFIG_FILE_NAME);
-        if (!configPath) {
+    }
+    static fromProject(projectPath) {
+        const configPath = this.configFilePath(projectPath);
+        if (!configPath ||
+            (configPath === this.globalConfigFilePath() && process.cwd() !== path.dirname(configPath))) {
             return null;
         }
-        var cliConfig = config_1.CliConfig.fromConfigPath(CliConfig.configFilePath(), [globalConfigPath]);
-        var aliases = [
+        if (configCacheMap.has(configPath)) {
+            return configCacheMap.get(configPath);
+        }
+        const globalConfigPath = CliConfig.globalConfigFilePath();
+        const cliConfig = config_1.CliConfig.fromConfigPath(configPath, [globalConfigPath]);
+        CliConfig.addAliases(cliConfig);
+        configCacheMap.set(configPath, cliConfig);
+        return cliConfig;
+    }
+    static addAliases(cliConfig) {
+        // Aliases with deprecation messages.
+        const aliases = [
             cliConfig.alias('apps.0.root', 'defaults.sourceDir'),
             cliConfig.alias('apps.0.prefix', 'defaults.prefix')
         ];
         // If any of them returned true, output a deprecation warning.
-        if (aliases.some(function (x) { return !!x; })) {
-            console.error(chalk.yellow((_a = ["\n        The \"defaults.prefix\" and \"defaults.sourceDir\" properties of angular-cli.json\n        are deprecated in favor of \"apps[0].root\" and \"apps[0].prefix\".\n\n        Please update in order to avoid errors in future versions of angular-cli.\n      "], _a.raw = ["\n        The \"defaults.prefix\" and \"defaults.sourceDir\" properties of angular-cli.json\n        are deprecated in favor of \"apps[0].root\" and \"apps[0].prefix\".\\n\n        Please update in order to avoid errors in future versions of angular-cli.\n      "], common_tags_1.oneLine(_a))));
+        if (aliases.some(x => x)) {
+            console.error(chalk.yellow(common_tags_1.oneLine `
+        The "defaults.prefix" and "defaults.sourceDir" properties of .angular-cli.json
+        are deprecated in favor of "apps[0].root" and "apps[0].prefix".\n
+        Please update in order to avoid errors in future versions of Angular CLI.
+      `));
         }
-        return cliConfig;
-        var _a;
-    };
-    return CliConfig;
-}(config_1.CliConfig));
+        // Additional aliases which do not emit any messages.
+        cliConfig.alias('defaults.interface.prefix', 'defaults.inline.prefixInterfaces');
+        cliConfig.alias('defaults.component.inlineStyle', 'defaults.inline.style');
+        cliConfig.alias('defaults.component.inlineTemplate', 'defaults.inline.template');
+        cliConfig.alias('defaults.component.spec', 'defaults.spec.component');
+        cliConfig.alias('defaults.class.spec', 'defaults.spec.class');
+        cliConfig.alias('defaults.component.directive', 'defaults.spec.directive');
+        cliConfig.alias('defaults.component.module', 'defaults.spec.module');
+        cliConfig.alias('defaults.component.pipe', 'defaults.spec.pipe');
+        cliConfig.alias('defaults.component.service', 'defaults.spec.service');
+        cliConfig.alias('defaults.build.poll', 'defaults.poll');
+    }
+}
 exports.CliConfig = CliConfig;
-//# sourceMappingURL=/Users/twer/dev/sdk/angular-cli/packages/@angular/cli/models/config.js.map
+//# sourceMappingURL=/users/wzc/dev/angular-cli/models/config.js.map

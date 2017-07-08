@@ -1,67 +1,59 @@
 "use strict";
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
-var fs = require('fs');
-var path = require('path');
-var json_schema_1 = require('@ngtools/json-schema');
-var DEFAULT_CONFIG_SCHEMA_PATH = path.join(__dirname, '../../lib/config/schema.json');
-var InvalidConfigError = (function (_super) {
-    __extends(InvalidConfigError, _super);
-    function InvalidConfigError(message) {
-        _super.call(this, message);
+Object.defineProperty(exports, "__esModule", { value: true });
+const fs = require("fs");
+const path = require("path");
+const ts = require("typescript");
+const common_tags_1 = require("common-tags");
+const json_schema_1 = require("@ngtools/json-schema");
+const DEFAULT_CONFIG_SCHEMA_PATH = path.join(__dirname, '../../lib/config/schema.json');
+class InvalidConfigError extends Error {
+    constructor(message) {
+        super(message);
         this.message = message;
         this.name = 'InvalidConfigError';
     }
-    return InvalidConfigError;
-}(Error));
-var CliConfig = (function () {
-    function CliConfig(_configPath, schema, configJson, fallbacks) {
-        if (fallbacks === void 0) { fallbacks = []; }
+}
+class CliConfig {
+    constructor(_configPath, schema, configJson, fallbacks = []) {
         this._configPath = _configPath;
-        this._config = new ((_a = (json_schema_1.SchemaClassFactory(schema))).bind.apply(_a, [void 0].concat([configJson], fallbacks)))();
-        var _a;
+        this._config = new (json_schema_1.SchemaClassFactory(schema))(configJson, ...fallbacks);
     }
-    Object.defineProperty(CliConfig.prototype, "config", {
-        get: function () { return this._config; },
-        enumerable: true,
-        configurable: true
-    });
-    CliConfig.prototype.save = function (path) {
-        if (path === void 0) { path = this._configPath; }
+    get config() { return this._config; }
+    save(path = this._configPath) {
         return fs.writeFileSync(path, this.serialize(), 'utf-8');
-    };
-    CliConfig.prototype.serialize = function (mimetype) {
-        if (mimetype === void 0) { mimetype = 'application/json'; }
+    }
+    serialize(mimetype = 'application/json') {
         return this._config.$$serialize(mimetype);
-    };
-    CliConfig.prototype.alias = function (path, newPath) {
+    }
+    alias(path, newPath) {
         return this._config.$$alias(path, newPath);
-    };
-    CliConfig.prototype.get = function (jsonPath) {
-        return this._config.$$get(jsonPath);
-    };
-    CliConfig.prototype.typeOf = function (jsonPath) {
-        return this._config.$$typeOf(jsonPath);
-    };
-    CliConfig.prototype.isDefined = function (jsonPath) {
-        return this._config.$$defined(jsonPath);
-    };
-    CliConfig.prototype.deletePath = function (jsonPath) {
-        return this._config.$$delete(jsonPath);
-    };
-    CliConfig.prototype.set = function (jsonPath, value) {
-        this._config.$$set(jsonPath, value);
-    };
-    CliConfig.fromJson = function (content) {
-        var global = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            global[_i - 1] = arguments[_i];
+    }
+    get(jsonPath) {
+        if (!jsonPath) {
+            return this._config.$$root();
         }
-        var schemaContent = fs.readFileSync(DEFAULT_CONFIG_SCHEMA_PATH, 'utf-8');
-        var schema;
+        return this._config.$$get(jsonPath);
+    }
+    typeOf(jsonPath) {
+        return this._config.$$typeOf(jsonPath);
+    }
+    isDefined(jsonPath) {
+        return this._config.$$defined(jsonPath);
+    }
+    deletePath(jsonPath) {
+        return this._config.$$delete(jsonPath);
+    }
+    set(jsonPath, value) {
+        this._config.$$set(jsonPath, value);
+    }
+    getPaths(baseJsonPath, keys) {
+        const ret = {};
+        keys.forEach(key => ret[key] = this.get(`${baseJsonPath}.${key}`));
+        return ret;
+    }
+    static fromJson(content, ...global) {
+        const schemaContent = fs.readFileSync(DEFAULT_CONFIG_SCHEMA_PATH, 'utf-8');
+        let schema;
         try {
             schema = JSON.parse(schemaContent);
         }
@@ -69,36 +61,47 @@ var CliConfig = (function () {
             throw new InvalidConfigError(err.message);
         }
         return new CliConfig(null, schema, content, global);
-    };
-    CliConfig.fromConfigPath = function (configPath, otherPath) {
-        if (otherPath === void 0) { otherPath = []; }
-        var configContent = fs.existsSync(configPath)
-            ? fs.readFileSync(configPath, 'utf-8')
-            : '{}';
-        var schemaContent = fs.readFileSync(DEFAULT_CONFIG_SCHEMA_PATH, 'utf-8');
-        var otherContents = otherPath
-            .map(function (path) { return fs.existsSync(path) && fs.readFileSync(path, 'utf-8'); })
-            .filter(function (content) { return !!content; });
-        var content;
-        var schema;
-        var others;
+    }
+    static fromConfigPath(configPath, otherPath = []) {
+        const configContent = ts.sys.readFile(configPath) || '{}';
+        const schemaContent = fs.readFileSync(DEFAULT_CONFIG_SCHEMA_PATH, 'utf-8');
+        let otherContents = new Array();
+        if (configPath !== otherPath[0]) {
+            otherContents = otherPath
+                .map(path => ts.sys.readFile(path))
+                .filter(content => !!content);
+        }
+        let content;
+        let schema;
+        let others;
         try {
             content = JSON.parse(configContent);
         }
         catch (err) {
-            throw new InvalidConfigError('Parsing angular-cli.json failed. Please make sure your angular-cli.json'
-                + ' is valid JSON. Error:\n' + err);
+            throw new InvalidConfigError(common_tags_1.stripIndent `
+        Parsing '${configPath}' failed. Ensure the file is valid JSON.
+        Error: ${err.message}
+      `);
         }
+        others = otherContents.map(otherContent => {
+            try {
+                return JSON.parse(otherContent);
+            }
+            catch (err) {
+                throw new InvalidConfigError(common_tags_1.stripIndent `
+          Parsing '${configPath}' failed. Ensure the file is valid JSON.
+          Error: ${err.message}
+        `);
+            }
+        });
         try {
             schema = JSON.parse(schemaContent);
-            others = otherContents.map(function (otherContent) { return JSON.parse(otherContent); });
         }
         catch (err) {
-            throw new InvalidConfigError("Parsing Angular CLI schema or other configuration files failed. Error:\n" + err);
+            throw new InvalidConfigError(`Parsing Angular CLI schema failed. Error:\n${err.message}`);
         }
         return new CliConfig(configPath, schema, content, others);
-    };
-    return CliConfig;
-}());
+    }
+}
 exports.CliConfig = CliConfig;
-//# sourceMappingURL=/Users/twer/dev/sdk/angular-cli/packages/@angular/cli/models/config/config.js.map
+//# sourceMappingURL=/users/wzc/dev/angular-cli/models/config/config.js.map

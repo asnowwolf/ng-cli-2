@@ -1,86 +1,90 @@
 "use strict";
-var webpackMerge = require('webpack-merge');
-var config_1 = require('./config');
-var webpack_configs_1 = require('./webpack-configs');
-var path = require('path');
-var NgCliWebpackConfig = (function () {
-    function NgCliWebpackConfig(buildOptions) {
+Object.defineProperty(exports, "__esModule", { value: true });
+const webpackMerge = require('webpack-merge');
+const config_1 = require("./config");
+const webpack_configs_1 = require("./webpack-configs");
+const path = require('path');
+class NgCliWebpackConfig {
+    constructor(buildOptions, appConfig) {
         this.validateBuildOptions(buildOptions);
-        var configPath = config_1.CliConfig.configFilePath();
-        var projectRoot = path.dirname(configPath);
-        var appConfig = config_1.CliConfig.fromProject().config.apps[0];
+        const configPath = config_1.CliConfig.configFilePath();
+        const projectRoot = path.dirname(configPath);
         appConfig = this.addAppConfigDefaults(appConfig);
         buildOptions = this.addTargetDefaults(buildOptions);
         buildOptions = this.mergeConfigs(buildOptions, appConfig);
-        var wco = { projectRoot: projectRoot, buildOptions: buildOptions, appConfig: appConfig };
-        var webpackConfigs = [
-            webpack_configs_1.getCommonConfig(wco),
-            webpack_configs_1.getStylesConfig(wco),
-            this.getTargetConfig(wco)
+        this.wco = { projectRoot, buildOptions, appConfig };
+    }
+    buildConfig() {
+        let webpackConfigs = [
+            webpack_configs_1.getCommonConfig(this.wco),
+            webpack_configs_1.getBrowserConfig(this.wco),
+            webpack_configs_1.getStylesConfig(this.wco),
+            this.getTargetConfig(this.wco)
         ];
-        if (appConfig.main || appConfig.polyfills) {
-            var typescriptConfigPartial = buildOptions.aot
-                ? webpack_configs_1.getAotConfig(wco)
-                : webpack_configs_1.getNonAotConfig(wco);
+        if (this.wco.appConfig.main || this.wco.appConfig.polyfills) {
+            const typescriptConfigPartial = this.wco.buildOptions.aot
+                ? webpack_configs_1.getAotConfig(this.wco)
+                : webpack_configs_1.getNonAotConfig(this.wco);
             webpackConfigs.push(typescriptConfigPartial);
         }
-        // add style config
         this.config = webpackMerge(webpackConfigs);
+        return this.config;
     }
-    NgCliWebpackConfig.prototype.getTargetConfig = function (webpackConfigOptions) {
+    getTargetConfig(webpackConfigOptions) {
         switch (webpackConfigOptions.buildOptions.target) {
             case 'development':
                 return webpack_configs_1.getDevConfig(webpackConfigOptions);
             case 'production':
                 return webpack_configs_1.getProdConfig(webpackConfigOptions);
         }
-    };
+    }
     // Validate build options
-    NgCliWebpackConfig.prototype.validateBuildOptions = function (buildOptions) {
+    validateBuildOptions(buildOptions) {
+        buildOptions.target = buildOptions.target || 'development';
         if (buildOptions.target !== 'development' && buildOptions.target !== 'production') {
             throw new Error("Invalid build target. Only 'development' and 'production' are available.");
         }
-    };
+    }
     // Fill in defaults for build targets
-    NgCliWebpackConfig.prototype.addTargetDefaults = function (buildOptions) {
-        var targetDefaults = {
+    addTargetDefaults(buildOptions) {
+        const targetDefaults = {
             development: {
                 environment: 'dev',
-                outputHashing: 'none',
-                sourcemap: true,
+                outputHashing: 'media',
+                sourcemaps: true,
                 extractCss: false
             },
             production: {
                 environment: 'prod',
                 outputHashing: 'all',
-                sourcemap: false,
+                sourcemaps: false,
                 extractCss: true,
                 aot: true
             }
         };
         return Object.assign({}, targetDefaults[buildOptions.target], buildOptions);
-    };
-    // Fill in defaults from angular-cli.json
-    NgCliWebpackConfig.prototype.mergeConfigs = function (buildOptions, appConfig) {
-        var mergeableOptions = {
+    }
+    // Fill in defaults from .angular-cli.json
+    mergeConfigs(buildOptions, appConfig) {
+        const mergeableOptions = {
             outputPath: appConfig.outDir,
-            deployUrl: appConfig.deployUrl
+            deployUrl: appConfig.deployUrl,
+            baseHref: appConfig.baseHref
         };
         return Object.assign({}, mergeableOptions, buildOptions);
-    };
-    NgCliWebpackConfig.prototype.addAppConfigDefaults = function (appConfig) {
-        var appConfigDefaults = {
+    }
+    addAppConfigDefaults(appConfig) {
+        const appConfigDefaults = {
+            testTsconfig: appConfig.tsconfig,
             scripts: [],
             styles: []
         };
         // can't use Object.assign here because appConfig has a lot of getters/setters
-        for (var _i = 0, _a = Object.keys(appConfigDefaults); _i < _a.length; _i++) {
-            var key = _a[_i];
+        for (let key of Object.keys(appConfigDefaults)) {
             appConfig[key] = appConfig[key] || appConfigDefaults[key];
         }
         return appConfig;
-    };
-    return NgCliWebpackConfig;
-}());
+    }
+}
 exports.NgCliWebpackConfig = NgCliWebpackConfig;
-//# sourceMappingURL=/Users/twer/dev/sdk/angular-cli/packages/@angular/cli/models/webpack-config.js.map
+//# sourceMappingURL=/users/wzc/dev/angular-cli/models/webpack-config.js.map

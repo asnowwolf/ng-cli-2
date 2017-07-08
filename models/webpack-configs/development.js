@@ -1,5 +1,9 @@
 "use strict";
-exports.getDevConfig = function (wco) {
-    return {};
+Object.defineProperty(exports, "__esModule", { value: true });
+const webpack_1 = require("webpack");
+exports.getDevConfig = function (_wco) {
+    return {
+        plugins: [new webpack_1.NamedModulesPlugin()]
+    };
 };
-//# sourceMappingURL=/Users/twer/dev/sdk/angular-cli/packages/@angular/cli/models/webpack-configs/development.js.map
+//# sourceMappingURL=/users/wzc/dev/angular-cli/models/webpack-configs/development.js.map

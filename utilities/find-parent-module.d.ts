@@ -1,1 +1,1 @@
-export default function findParentModule(project: any, currentDir: string): string;
+export default function findParentModule(projectRoot: string, appRoot: string, currentDir: string): string;

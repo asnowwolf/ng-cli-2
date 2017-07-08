@@ -1,3 +1,4 @@
+import { NamedLazyChunksWebpackPlugin } from '../../plugins/named-lazy-chunks-webpack-plugin';
 import { WebpackConfigOptions } from '../webpack-config';
 /**
  * Enumerate loaders and their dependencies from this file to let the dependency validator
@@ -6,15 +7,18 @@ import { WebpackConfigOptions } from '../webpack-config';
  * require('source-map-loader')
  * require('raw-loader')
  * require('script-loader')
+ * require('html-loader')
+ * require('markup-inline-loader')
+ * require('markdown-loader')
  * require('json-loader')
  * require('url-loader')
  * require('file-loader')
  */
 export declare function getCommonConfig(wco: WebpackConfigOptions): {
-    devtool: string | boolean;
     resolve: {
         extensions: string[];
         modules: string[];
+        symlinks: boolean;
     };
     resolveLoader: {
         modules: string[];
@@ -27,7 +31,6 @@ export declare function getCommonConfig(wco: WebpackConfigOptions): {
         path: string;
         publicPath: string;
         filename: string;
-        sourceMapFilename: string;
         chunkFilename: string;
     };
     module: {
@@ -44,7 +47,7 @@ export declare function getCommonConfig(wco: WebpackConfigOptions): {
             loaders: string[];
         })[];
     };
-    plugins: any[];
+    plugins: NamedLazyChunksWebpackPlugin[];
     node: {
         fs: string;
         global: boolean;

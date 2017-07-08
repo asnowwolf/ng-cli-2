@@ -1,7 +1,5 @@
 'use strict';
 
-var ora              = require('ora');
-var Promise          = require('../ext/promise');
 var EOL              = require('os').EOL;
 var chalk            = require('chalk');
 var writeError       = require('./write-error');
@@ -32,20 +30,8 @@ module.exports = UI;
 **/
 
 function UI(options) {
-  var spinner = this.spinner = ora({ color: 'green' });
-
-  this.through  = require('through');
-
   // Output stream
-  this.actualOutputStream = options.outputStream;
-  this.outputStream = this.through(function(data) {
-    spinner.stop();
-    this.emit('data', data);
-  });
-
-  this.outputStream.setMaxListeners(0);
-  this.outputStream.pipe(this.actualOutputStream);
-
+  this.outputStream = options.outputStream;
   this.inputStream = options.inputStream;
   this.errorStream = options.errorStream;
 
@@ -174,19 +160,12 @@ UI.prototype.setWriteLevel = function(level) {
 
 UI.prototype.startProgress = function(message/*, stepString*/) {
   if (this.writeLevelVisible('INFO')) {
-    if (this.ci) {
-      this.writeLine(message);
-    } else {
-      this.spinner.text = message;
-      this.spinner.start();
-    }
+    this.writeLine(message);
   }
 };
 
 UI.prototype.stopProgress = function() {
-  if (this.writeLevelVisible('INFO') && !this.ci) {
-    this.spinner.stop();
-  }
+
 };
 
 UI.prototype.prompt = function(questions, callback) {
@@ -194,12 +173,10 @@ UI.prototype.prompt = function(questions, callback) {
 
   // If no callback was provided, automatically return a promise
   if (callback) {
-    inquirer.prompt(questions, callback);
-  } else {
-    return new Promise(function(resolve) {
-      inquirer.prompt(questions, resolve);
-    });
+    return inquirer.prompt(questions, callback);
   }
+
+  return inquirer.prompt(questions);
 };
 
 /**

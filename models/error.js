@@ -1,13 +1,8 @@
 "use strict";
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
-var NgToolkitError = (function (_super) {
-    __extends(NgToolkitError, _super);
-    function NgToolkitError(message) {
-        _super.call(this);
+Object.defineProperty(exports, "__esModule", { value: true });
+class NgToolkitError extends Error {
+    constructor(message) {
+        super();
         if (message) {
             this.message = message;
         }
@@ -15,7 +10,6 @@ var NgToolkitError = (function (_super) {
             this.message = this.constructor.name;
         }
     }
-    return NgToolkitError;
-}(Error));
+}
 exports.NgToolkitError = NgToolkitError;
-//# sourceMappingURL=/Users/twer/dev/sdk/angular-cli/packages/@angular/cli/models/error.js.map
+//# sourceMappingURL=/users/wzc/dev/angular-cli/models/error.js.map

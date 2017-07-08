@@ -1,6 +1,5 @@
-/* tslint:disable:no-unused-variable */
+import { TestBed, inject } from '@angular/core/testing';
 
-import { TestBed, async, inject } from '@angular/core/testing';
 import { <%= classifiedModuleName %>Service } from './<%= dasherizedModuleName %>.service';
 
 describe('<%= classifiedModuleName %>Service', () => {
@@ -10,7 +9,7 @@ describe('<%= classifiedModuleName %>Service', () => {
     });
   });
 
-  it('should ...', inject([<%= classifiedModuleName %>Service], (service: <%= classifiedModuleName %>Service) => {
+  it('should be created', inject([<%= classifiedModuleName %>Service], (service: <%= classifiedModuleName %>Service) => {
     expect(service).toBeTruthy();
   }));
 });

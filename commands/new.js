@@ -1,84 +1,189 @@
 "use strict";
-var chalk = require('chalk');
-var init_1 = require('./init');
-var common_tags_1 = require('common-tags');
-var Command = require('../ember-cli/lib/models/command');
-var Project = require('../ember-cli/lib/models/project');
-var SilentError = require('silent-error');
-var validProjectName = require('../ember-cli/lib/utilities/valid-project-name');
-var packageNameRegexp = /^[a-zA-Z][.0-9a-zA-Z]*(-[a-zA-Z][.0-9a-zA-Z]*)*$/;
-function getRegExpFailPosition(str) {
-    var parts = str.split('-');
-    var matched = [];
-    parts.forEach(function (part) {
-        if (part.match(packageNameRegexp)) {
-            matched.push(part);
-        }
-    });
-    var compare = matched.join('-');
-    return (str !== compare) ? compare.length : null;
-}
-var NewCommand = Command.extend({
+Object.defineProperty(exports, "__esModule", { value: true });
+const fs = require("fs");
+const path = require("path");
+const chalk = require("chalk");
+const denodeify = require("denodeify");
+const init_1 = require("./init");
+const config_1 = require("../models/config");
+const validate_project_name_1 = require("../utilities/validate-project-name");
+const common_tags_1 = require("common-tags");
+const Command = require('../ember-cli/lib/models/command');
+const Project = require('../ember-cli/lib/models/project');
+const SilentError = require('silent-error');
+const mkdir = denodeify(fs.mkdir);
+const configFile = '.angular-cli.json';
+const changeLater = (path) => `You can later change the value in "${configFile}" (${path})`;
+const NewCommand = Command.extend({
     name: 'new',
-    description: "Creates a new directory and runs " + chalk.green('ng init') + " in it.",
+    aliases: ['n'],
+    description: `Creates a new directory and a new Angular app eg. "ng new [name]".`,
     works: 'outsideProject',
     availableOptions: [
-        { name: 'dry-run', type: Boolean, default: false, aliases: ['d'] },
-        { name: 'verbose', type: Boolean, default: false, aliases: ['v'] },
-        { name: 'link-cli', type: Boolean, default: false, aliases: ['lc'] },
-        { name: 'skip-npm', type: Boolean, default: false, aliases: ['sn'] },
-        { name: 'skip-git', type: Boolean, default: false, aliases: ['sg'] },
-        { name: 'skip-tests', type: Boolean, default: false, aliases: ['st'] },
-        { name: 'skip-commit', type: Boolean, default: false, aliases: ['sc'] },
-        { name: 'directory', type: String, aliases: ['dir'] },
-        { name: 'source-dir', type: String, default: 'src', aliases: ['sd'] },
-        { name: 'style', type: String, default: 'css' },
-        { name: 'prefix', type: String, default: 'app', aliases: ['p'] },
-        { name: 'routing', type: Boolean, default: false },
-        { name: 'inline-style', type: Boolean, default: false, aliases: ['is'] },
-        { name: 'inline-template', type: Boolean, default: false, aliases: ['it'] }
+        {
+            name: 'dry-run',
+            type: Boolean,
+            default: false,
+            aliases: ['d'],
+            description: common_tags_1.oneLine `
+        Run through without making any changes.
+        Will list all files that would have been created when running "ng new".
+      `
+        },
+        {
+            name: 'verbose',
+            type: Boolean,
+            default: false,
+            aliases: ['v'],
+            description: 'Adds more details to output logging.'
+        },
+        {
+            name: 'link-cli',
+            type: Boolean,
+            default: false,
+            aliases: ['lc'],
+            description: 'Automatically link the `@angular/cli` package.',
+            hidden: true
+        },
+        {
+            name: 'skip-install',
+            type: Boolean,
+            default: false,
+            aliases: ['si'],
+            description: 'Skip installing packages.'
+        },
+        {
+            name: 'skip-git',
+            type: Boolean,
+            default: false,
+            aliases: ['sg'],
+            description: 'Skip initializing a git repository.'
+        },
+        {
+            name: 'skip-tests',
+            type: Boolean,
+            default: false,
+            aliases: ['st'],
+            description: 'Skip creating spec files.'
+        },
+        {
+            name: 'skip-commit',
+            type: Boolean,
+            default: false,
+            aliases: ['sc'],
+            description: 'Skip committing the first commit to git.'
+        },
+        {
+            name: 'directory',
+            type: String,
+            aliases: ['dir'],
+            description: 'The directory name to create the app in.'
+        },
+        {
+            name: 'source-dir',
+            type: String,
+            default: 'src',
+            aliases: ['sd'],
+            description: `The name of the source directory. ${changeLater('apps[0].root')}.`
+        },
+        {
+            name: 'style',
+            type: String,
+            default: 'css',
+            description: common_tags_1.oneLine `The style file default extension.
+        Possible values: css, scss, less, sass, styl(stylus).
+        ${changeLater('defaults.styleExt')}.
+      `
+        },
+        {
+            name: 'prefix',
+            type: String,
+            default: 'app',
+            aliases: ['p'],
+            description: common_tags_1.oneLine `
+        The prefix to use for all component selectors.
+        ${changeLater('apps[0].prefix')}.
+      `
+        },
+        {
+            name: 'routing',
+            type: Boolean,
+            default: false,
+            description: 'Generate a routing module.'
+        },
+        {
+            name: 'inline-style',
+            type: Boolean,
+            default: false,
+            aliases: ['is'],
+            description: 'Should have an inline style.'
+        },
+        {
+            name: 'inline-template',
+            type: Boolean,
+            default: false,
+            aliases: ['it'],
+            description: 'Should have an inline template.'
+        },
+        {
+            name: 'minimal',
+            type: Boolean,
+            default: false,
+            description: 'Should create a minimal app.'
+        }
     ],
+    isProject: function (projectPath) {
+        return config_1.CliConfig.fromProject(projectPath) !== null;
+    },
     run: function (commandOptions, rawArgs) {
-        var packageName = rawArgs.shift();
+        const packageName = rawArgs.shift();
         if (!packageName) {
-            return Promise.reject(new SilentError(("The \"ng " + this.name + "\" command requires a name argument to be specified. ") +
-                "For more details, use \"ng help\"."));
+            return Promise.reject(new SilentError(`The "ng ${this.name}" command requires a name argument to be specified eg. ` +
+                chalk.yellow('ng new [name] ') +
+                `For more details, use "ng help".`));
         }
-        if (!packageName.match(packageNameRegexp)) {
-            var firstMessage = (_a = ["\n        Project name \"", "\" is not valid. New project names must\n        start with a letter, and must contain only alphanumeric characters or dashes.\n        When adding a dash the segment after the dash must start with a letter too.\n      "], _a.raw = ["\n        Project name \"", "\" is not valid. New project names must\n        start with a letter, and must contain only alphanumeric characters or dashes.\n        When adding a dash the segment after the dash must start with a letter too.\n      "], common_tags_1.oneLine(_a, packageName));
-            var msg = (_b = ["\n        ", "\n        ", "\n        ", "\n      "], _b.raw = ["\n        ", "\n        ", "\n        ", "\n      "], common_tags_1.stripIndent(_b, firstMessage, packageName, Array(getRegExpFailPosition(packageName) + 1).join(' ') + '^'));
-            return Promise.reject(new SilentError(msg));
-        }
+        validate_project_name_1.validateProjectName(packageName);
         commandOptions.name = packageName;
         if (commandOptions.dryRun) {
             commandOptions.skipGit = true;
         }
-        if (packageName === '.') {
-            return Promise.reject(new SilentError("Trying to generate an application structure in this directory? Use \"ng init\" " +
-                "instead."));
-        }
-        if (!validProjectName(packageName)) {
-            return Promise.reject(new SilentError("We currently do not support a name of \"" + packageName + "\"."));
-        }
-        if (!commandOptions.directory) {
-            commandOptions.directory = packageName;
-        }
-        var createAndStepIntoDirectory = new this.tasks.CreateAndStepIntoDirectory({ ui: this.ui });
-        var initCommand = new init_1.default({
+        const directoryName = path.join(process.cwd(), commandOptions.directory ? commandOptions.directory : packageName);
+        const initCommand = new init_1.default({
             ui: this.ui,
             tasks: this.tasks,
             project: Project.nullProject(this.ui, this.cli)
         });
-        return createAndStepIntoDirectory
-            .run({
-            directoryName: commandOptions.directory,
-            dryRun: commandOptions.dryRun
-        })
+        let createDirectory;
+        if (commandOptions.dryRun) {
+            createDirectory = Promise.resolve()
+                .then(() => {
+                if (fs.existsSync(directoryName) && this.isProject(directoryName)) {
+                    throw new SilentError(common_tags_1.oneLine `
+              Directory ${directoryName} exists and is already an Angular CLI project.
+            `);
+                }
+            });
+        }
+        else {
+            createDirectory = mkdir(directoryName)
+                .catch(err => {
+                if (err.code === 'EEXIST') {
+                    if (this.isProject(directoryName)) {
+                        throw new SilentError(common_tags_1.oneLine `
+                Directory ${directoryName} exists and is already an Angular CLI project.
+              `);
+                    }
+                }
+                else {
+                    throw err;
+                }
+            })
+                .then(() => process.chdir(directoryName));
+        }
+        return createDirectory
             .then(initCommand.run.bind(initCommand, commandOptions, rawArgs));
-        var _a, _b;
     }
 });
 NewCommand.overrideCore = true;
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = NewCommand;
-//# sourceMappingURL=/Users/twer/dev/sdk/angular-cli/packages/@angular/cli/commands/new.js.map
+//# sourceMappingURL=/users/wzc/dev/angular-cli/commands/new.js.map

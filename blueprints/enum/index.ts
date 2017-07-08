@@ -1,12 +1,32 @@
+import {getAppFromConfig} from '../../utilities/app-utils';
+import {dynamicPathParser, DynamicPathOptions} from '../../utilities/dynamic-path-parser';
+
 const stringUtils = require('ember-cli-string-utils');
-const dynamicPathParser = require('../../utilities/dynamic-path-parser');
 const Blueprint = require('../../ember-cli/lib/models/blueprint');
 
 export default Blueprint.extend({
+  name: 'enum',
   description: '',
+  aliases: ['e'],
+
+  availableOptions: [
+    {
+      name: 'app',
+      type: String,
+      aliases: ['a'],
+      description: 'Specifies app name to use.'
+    }
+  ],
 
   normalizeEntityName: function (entityName: string) {
-    const parsedPath = dynamicPathParser(this.project, entityName);
+    const appConfig = getAppFromConfig(this.options.app);
+    const dynamicPathOptions: DynamicPathOptions = {
+      project: this.project,
+      entityName,
+      appConfig,
+      dryRun: this.options.dryRun
+    };
+    const parsedPath = dynamicPathParser(dynamicPathOptions);
 
     this.dynamicPath = parsedPath;
     return parsedPath.name;

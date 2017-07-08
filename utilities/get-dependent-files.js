@@ -1,11 +1,12 @@
 "use strict";
-var fs = require('fs');
-var ts = require('typescript');
-var glob = require('glob');
-var path = require('path');
-var denodeify = require('denodeify');
-var readFile = denodeify(fs.readFile);
-var globSearch = denodeify(glob);
+Object.defineProperty(exports, "__esModule", { value: true });
+const fs = require("fs");
+const ts = require("typescript");
+const glob = require("glob");
+const path = require("path");
+const denodeify = require("denodeify");
+const readFile = denodeify(fs.readFile);
+const globSearch = denodeify(glob);
 /**
  * Create a SourceFile as defined by Typescript Compiler API.
  * Generate a AST structure from a source file.
@@ -14,7 +15,7 @@ var globSearch = denodeify(glob);
  */
 function createTsSourceFile(fileName) {
     return readFile(fileName, 'utf8')
-        .then(function (contents) {
+        .then((contents) => {
         return ts.createSourceFile(fileName, contents, ts.ScriptTarget.Latest, true);
     });
 }
@@ -30,9 +31,9 @@ exports.createTsSourceFile = createTsSourceFile;
  */
 function getImportClauses(node) {
     return node.statements
-        .filter(function (node) { return node.kind === ts.SyntaxKind.ImportDeclaration; }) // Only Imports.
-        .map(function (node) {
-        var moduleSpecifier = node.moduleSpecifier;
+        .filter(node => node.kind === ts.SyntaxKind.ImportDeclaration) // Only Imports.
+        .map((node) => {
+        let moduleSpecifier = node.moduleSpecifier;
         return {
             specifierText: moduleSpecifier.getText().slice(1, -1),
             pos: moduleSpecifier.pos,
@@ -51,7 +52,7 @@ exports.getImportClauses = getImportClauses;
  */
 function hasIndexFile(dirPath) {
     return globSearch(path.join(dirPath, 'index.ts'), { nodir: true })
-        .then(function (indexFile) {
+        .then((indexFile) => {
         return indexFile.length > 0;
     });
 }
@@ -73,11 +74,11 @@ exports.hasIndexFile = hasIndexFile;
  *
  */
 function getAllAssociatedFiles(fileName) {
-    var fileDirName = path.dirname(fileName);
-    var componentName = path.basename(fileName, '.ts');
-    return globSearch(path.join(fileDirName, componentName + ".*"), { nodir: true })
-        .then(function (files) {
-        return files.filter(function (file) {
+    let fileDirName = path.dirname(fileName);
+    let componentName = path.basename(fileName, '.ts');
+    return globSearch(path.join(fileDirName, `${componentName}.*`), { nodir: true })
+        .then((files) => {
+        return files.filter((file) => {
             return (path.basename(file) !== 'index.ts');
         });
     });
@@ -95,41 +96,40 @@ exports.getAllAssociatedFiles = getAllAssociatedFiles;
  */
 function getDependentFiles(fileName, rootPath) {
     return globSearch(path.join(rootPath, '**/*.ts'), { nodir: true })
-        .then(function (files) { return Promise.all(files.map(function (file) { return createTsSourceFile(file); }))
-        .then(function (tsFiles) { return tsFiles.map(function (file) { return getImportClauses(file); }); })
-        .then(function (moduleSpecifiers) {
-        var allFiles = {};
-        files.forEach(function (file, index) {
-            var sourcePath = path.normalize(file);
+        .then((files) => Promise.all(files.map(file => createTsSourceFile(file)))
+        .then((tsFiles) => tsFiles.map(file => getImportClauses(file)))
+        .then((moduleSpecifiers) => {
+        let allFiles = {};
+        files.forEach((file, index) => {
+            let sourcePath = path.normalize(file);
             allFiles[sourcePath] = moduleSpecifiers[index];
         });
         return allFiles;
     })
-        .then(function (allFiles) {
-        var relevantFiles = {};
-        Object.keys(allFiles).forEach(function (filePath) {
-            var tempModuleSpecifiers = allFiles[filePath]
-                .filter(function (importClause) {
+        .then((allFiles) => {
+        let relevantFiles = {};
+        Object.keys(allFiles).forEach(filePath => {
+            const tempModuleSpecifiers = allFiles[filePath]
+                .filter(importClause => {
                 // Filter only relative imports
-                var singleSlash = importClause.specifierText.charAt(0) === '/';
-                var currentDirSyntax = importClause.specifierText.slice(0, 2) === './';
-                var parentDirSyntax = importClause.specifierText.slice(0, 3) === '../';
+                let singleSlash = importClause.specifierText.charAt(0) === '/';
+                let currentDirSyntax = importClause.specifierText.slice(0, 2) === './';
+                let parentDirSyntax = importClause.specifierText.slice(0, 3) === '../';
                 return singleSlash || currentDirSyntax || parentDirSyntax;
             })
-                .filter(function (importClause) {
-                var modulePath = path.resolve(path.dirname(filePath), importClause.specifierText);
-                var resolvedFileName = path.resolve(fileName);
-                var fileBaseName = path.basename(resolvedFileName, '.ts');
-                var parsedFilePath = path.join(path.dirname(resolvedFileName), fileBaseName);
+                .filter(importClause => {
+                let modulePath = path.resolve(path.dirname(filePath), importClause.specifierText);
+                let resolvedFileName = path.resolve(fileName);
+                let fileBaseName = path.basename(resolvedFileName, '.ts');
+                let parsedFilePath = path.join(path.dirname(resolvedFileName), fileBaseName);
                 return (parsedFilePath === modulePath) || (resolvedFileName === modulePath);
             });
             if (tempModuleSpecifiers.length > 0) {
                 relevantFiles[filePath] = tempModuleSpecifiers;
             }
-            ;
         });
         return relevantFiles;
-    }); });
+    }));
 }
 exports.getDependentFiles = getDependentFiles;
-//# sourceMappingURL=/Users/twer/dev/sdk/angular-cli/packages/@angular/cli/utilities/get-dependent-files.js.map
+//# sourceMappingURL=/users/wzc/dev/angular-cli/utilities/get-dependent-files.js.map

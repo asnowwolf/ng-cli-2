@@ -1,30 +1,44 @@
 "use strict";
-var stringUtils = require('ember-cli-string-utils');
-var dynamicPathParser = require('../../utilities/dynamic-path-parser');
-var Blueprint = require('../../ember-cli/lib/models/blueprint');
 Object.defineProperty(exports, "__esModule", { value: true });
+const config_1 = require("../../models/config");
+const app_utils_1 = require("../../utilities/app-utils");
+const dynamic_path_parser_1 = require("../../utilities/dynamic-path-parser");
+const stringUtils = require('ember-cli-string-utils');
+const Blueprint = require('../../ember-cli/lib/models/blueprint');
 exports.default = Blueprint.extend({
+    name: 'interface',
     description: '',
+    aliases: ['i'],
     anonymousOptions: [
         '<interface-type>'
     ],
+    availableOptions: [
+        {
+            name: 'app',
+            type: String,
+            aliases: ['a'],
+            description: 'Specifies app name to use.'
+        }
+    ],
     normalizeEntityName: function (entityName) {
-        var parsedPath = dynamicPathParser(this.project, entityName);
+        const appConfig = app_utils_1.getAppFromConfig(this.options.app);
+        const dynamicPathOptions = {
+            project: this.project,
+            entityName,
+            appConfig,
+            dryRun: this.options.dryRun
+        };
+        const parsedPath = dynamic_path_parser_1.dynamicPathParser(dynamicPathOptions);
         this.dynamicPath = parsedPath;
         return parsedPath.name;
     },
     locals: function (options) {
-        var interfaceType = options.args[2];
+        const interfaceType = options.args[2];
         this.fileName = stringUtils.dasherize(options.entity.name);
         if (interfaceType) {
             this.fileName += '.' + interfaceType;
         }
-        var prefix = '';
-        if (this.project.ngConfig &&
-            this.project.ngConfig.defaults &&
-            this.project.ngConfig.defaults.prefixInterfaces) {
-            prefix = 'I';
-        }
+        const prefix = config_1.CliConfig.getValue('defaults.interface.prefix');
         return {
             dynamicPath: this.dynamicPath.dir,
             flat: options.flat,
@@ -33,17 +47,16 @@ exports.default = Blueprint.extend({
         };
     },
     fileMapTokens: function () {
-        var _this = this;
         // Return custom template variables here.
         return {
-            __path__: function () {
-                _this.generatePath = _this.dynamicPath.dir;
-                return _this.generatePath;
+            __path__: () => {
+                this.generatePath = this.dynamicPath.dir;
+                return this.generatePath;
             },
-            __name__: function () {
-                return _this.fileName;
+            __name__: () => {
+                return this.fileName;
             }
         };
     }
 });
-//# sourceMappingURL=/Users/twer/dev/sdk/angular-cli/packages/@angular/cli/blueprints/interface/index.js.map
+//# sourceMappingURL=/users/wzc/dev/angular-cli/blueprints/interface/index.js.map
