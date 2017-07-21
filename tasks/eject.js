@@ -18,6 +18,7 @@ const ExtractTextPlugin = require('extract-text-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const SilentError = require('silent-error');
 const licensePlugin = require('license-webpack-plugin');
+const CircularDependencyPlugin = require('circular-dependency-plugin');
 const Task = require('../ember-cli/lib/models/task');
 const ProgressPlugin = require('webpack/lib/ProgressPlugin');
 exports.pluginArgs = Symbol('plugin-args');
@@ -59,6 +60,14 @@ class JsonWebpackSerializer {
         if (this.imports[module].indexOf(importName) == -1) {
             this.imports[module].push(importName);
         }
+    }
+    _globCopyWebpackPluginSerialize(value) {
+        let patterns = value.options.patterns;
+        let globOptions = value.options.globOptions;
+        return {
+            patterns,
+            globOptions: this._globReplacer(globOptions)
+        };
     }
     _commonsChunkPluginSerialize(value) {
         let minChunks = value.minChunks;
@@ -141,10 +150,17 @@ class JsonWebpackSerializer {
                 case webpack.optimize.UglifyJsPlugin:
                     this._addImport('webpack.optimize', 'UglifyJsPlugin');
                     break;
+                case webpack.optimize.ModuleConcatenationPlugin:
+                    this._addImport('webpack.optimize', 'ModuleConcatenationPlugin');
+                    break;
                 case angularCliPlugins.BaseHrefWebpackPlugin:
-                case angularCliPlugins.GlobCopyWebpackPlugin:
+                case angularCliPlugins.NamedLazyChunksWebpackPlugin:
                 case angularCliPlugins.SuppressExtractedTextChunksWebpackPlugin:
                     this._addImport('@angular/cli/plugins/webpack', plugin.constructor.name);
+                    break;
+                case angularCliPlugins.GlobCopyWebpackPlugin:
+                    args = this._globCopyWebpackPluginSerialize(plugin);
+                    this._addImport('@angular/cli/plugins/webpack', 'GlobCopyWebpackPlugin');
                     break;
                 case webpack.optimize.CommonsChunkPlugin:
                     args = this._commonsChunkPluginSerialize(plugin);
@@ -153,6 +169,9 @@ class JsonWebpackSerializer {
                 case ExtractTextPlugin:
                     args = this._extractTextPluginSerialize(plugin);
                     this.variableImports['extract-text-webpack-plugin'] = 'ExtractTextPlugin';
+                    break;
+                case CircularDependencyPlugin:
+                    this.variableImports['circular-dependency-plugin'] = 'CircularDependencyPlugin';
                     break;
                 case webpack_1.AotPlugin:
                     args = this._aotPluginSerialize(plugin);
@@ -283,6 +302,11 @@ class JsonWebpackSerializer {
     _moduleReplacer(value) {
         return Object.assign({}, value, {
             rules: value.rules && value.rules.map((x) => this._ruleReplacer(x))
+        });
+    }
+    _globReplacer(value) {
+        return Object.assign({}, value, {
+            cwd: this._relativePath('process.cwd()', path.relative(this._root, value.cwd))
         });
     }
     _replacer(_key, value) {
@@ -438,6 +462,7 @@ exports.default = Task.extend({
                 'style-loader',
                 'stylus-loader',
                 'url-loader',
+                'circular-dependency-plugin',
             ].forEach((packageName) => {
                 packageJson['devDependencies'][packageName] = ourPackageJson['dependencies'][packageName];
             });
@@ -467,7 +492,7 @@ exports.default = Task.extend({
 
           To run your builds, you now need to do the following commands:
              - "npm run build" to build.
-             - "npm run test" to run unit tests.
+             - "npm test" to run unit tests.
              - "npm start" to serve the app using webpack-dev-server.
              - "npm run e2e" to run protractor.
 

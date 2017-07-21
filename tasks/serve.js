@@ -1,9 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const fs = require("fs");
+const fs = require("fs-extra");
 const path = require("path");
 const chalk = require("chalk");
-const rimraf = require("rimraf");
 const webpack = require("webpack");
 const url = require("url");
 const common_tags_1 = require("common-tags");
@@ -15,6 +14,7 @@ const WebpackDevServer = require('webpack-dev-server');
 const Task = require('../ember-cli/lib/models/task');
 const SilentError = require('silent-error');
 const opn = require('opn');
+const yellow = require('chalk').yellow;
 exports.default = Task.extend({
     run: function (serveTaskOptions, rebuildDoneCb) {
         const ui = this.ui;
@@ -29,7 +29,7 @@ exports.default = Task.extend({
             throw new SilentError('An ejected project cannot use the build command anymore.');
         }
         if (serveTaskOptions.deleteOutputPath) {
-            rimraf.sync(path.resolve(this.project.root, outputPath));
+            fs.removeSync(path.resolve(this.project.root, outputPath));
         }
         const serveDefaults = {
             // default deployUrl to '' on serve to prevent the default from .angular-cli.json
@@ -44,7 +44,7 @@ exports.default = Task.extend({
         });
         if (serveTaskOptions.disableHostCheck) {
             ui.writeLine(common_tags_1.oneLine `
-          ${chalk.yellow('WARNING')} Running a server with --disable-host-check is a security risk.
+          ${yellow('WARNING')} Running a server with --disable-host-check is a security risk.
           See https://medium.com/webpack/webpack-dev-server-middleware-security-issues-1489d950874a
           for more information.
         `);
@@ -68,18 +68,24 @@ exports.default = Task.extend({
             if (serveTaskOptions.hmr) {
                 const webpackHmrLink = 'https://webpack.github.io/docs/hot-module-replacement.html';
                 ui.writeLine(common_tags_1.oneLine `
-          ${chalk.yellow('NOTICE')} Hot Module Replacement (HMR) is enabled for the dev server.
+          ${yellow('NOTICE')} Hot Module Replacement (HMR) is enabled for the dev server.
         `);
-                ui.writeLine('  The project will still live reload when HMR is enabled,');
-                ui.writeLine('  but to take advantage of HMR additional application code is required');
-                ui.writeLine('  (not included in an Angular CLI project by default).');
-                ui.writeLine(`  See ${chalk.blue(webpackHmrLink)}`);
-                ui.writeLine('  for information on working with HMR for Webpack.');
+                const showWarning = config_1.CliConfig.fromGlobal().get('warnings.hmrWarning');
+                if (showWarning) {
+                    ui.writeLine('  The project will still live reload when HMR is enabled,');
+                    ui.writeLine('  but to take advantage of HMR additional application code is required');
+                    ui.writeLine('  (not included in an Angular CLI project by default).');
+                    ui.writeLine(`  See ${chalk.blue(webpackHmrLink)}`);
+                    ui.writeLine('  for information on working with HMR for Webpack.');
+                    ui.writeLine(common_tags_1.oneLine `
+            ${yellow('To disable this warning use "ng set --global warnings.hmrWarning=false"')}
+          `);
+                }
                 entryPoints.push('webpack/hot/dev-server');
                 webpackConfig.plugins.push(new webpack.HotModuleReplacementPlugin());
                 if (serveTaskOptions.extractCss) {
                     ui.writeLine(common_tags_1.oneLine `
-            ${chalk.yellow('NOTICE')} (HMR) does not allow for CSS hot reload when used
+            ${yellow('NOTICE')} (HMR) does not allow for CSS hot reload when used
             together with '--extract-css'.
           `);
                 }
@@ -90,7 +96,7 @@ exports.default = Task.extend({
             webpackConfig.entry.main.unshift(...entryPoints);
         }
         else if (serveTaskOptions.hmr) {
-            ui.writeLine(chalk.yellow('Live reload is disabled. HMR option ignored.'));
+            ui.writeLine(yellow('Live reload is disabled. HMR option ignored.'));
         }
         if (!serveTaskOptions.watch) {
             // There's no option to turn off file watching in webpack-dev-server, but

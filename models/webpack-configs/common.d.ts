@@ -13,6 +13,7 @@ import { WebpackConfigOptions } from '../webpack-config';
  * require('json-loader')
  * require('url-loader')
  * require('file-loader')
+ * require('@angular-devkit/build-optimizer')
  */
 export declare function getCommonConfig(wco: WebpackConfigOptions): {
     resolve: {

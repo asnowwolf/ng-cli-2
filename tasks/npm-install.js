@@ -10,17 +10,18 @@ exports.default = Task.extend({
         if (packageManager === 'default') {
             packageManager = 'npm';
         }
-        return new Promise(function (resolve, reject) {
-            ui.writeLine(chalk.green(`Installing packages for tooling via ${packageManager}.`));
-            let installCommand = `${packageManager} install`;
-            if (packageManager === 'npm') {
-                installCommand = `${packageManager} --quiet install`;
-            }
+        ui.writeLine(chalk.green(`Installing packages for tooling via ${packageManager}.`));
+        let installCommand = `${packageManager} install`;
+        if (packageManager === 'npm') {
+            installCommand = `${packageManager} --quiet install`;
+        }
+        return new Promise((resolve, reject) => {
             child_process_1.exec(installCommand, (err, _stdout, stderr) => {
                 if (err) {
                     ui.writeLine(stderr);
-                    ui.writeLine(chalk.red('Package install failed, see above.'));
-                    reject();
+                    const message = 'Package install failed, see above.';
+                    ui.writeLine(chalk.red(message));
+                    reject(message);
                 }
                 else {
                     ui.writeLine(chalk.green(`Installed packages for tooling via ${packageManager}.`));

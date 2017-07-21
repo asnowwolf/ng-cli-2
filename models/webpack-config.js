@@ -44,6 +44,10 @@ class NgCliWebpackConfig {
         if (buildOptions.target !== 'development' && buildOptions.target !== 'production') {
             throw new Error("Invalid build target. Only 'development' and 'production' are available.");
         }
+        if (buildOptions.buildOptimizer
+            && !(buildOptions.aot || buildOptions.target === 'production')) {
+            throw new Error('The `--build-optimizer` option cannot be used without `--aot`.');
+        }
     }
     // Fill in defaults for build targets
     addTargetDefaults(buildOptions) {
@@ -52,13 +56,16 @@ class NgCliWebpackConfig {
                 environment: 'dev',
                 outputHashing: 'media',
                 sourcemaps: true,
-                extractCss: false
+                extractCss: false,
+                namedChunks: true,
+                aot: false
             },
             production: {
                 environment: 'prod',
                 outputHashing: 'all',
                 sourcemaps: false,
                 extractCss: true,
+                namedChunks: false,
                 aot: true
             }
         };

@@ -71,7 +71,7 @@ exports.getNonAotConfig = function (wco) {
     };
 };
 exports.getAotConfig = function (wco) {
-    const { projectRoot, appConfig } = wco;
+    const { projectRoot, buildOptions, appConfig } = wco;
     const tsConfigPath = path.resolve(projectRoot, appConfig.root, appConfig.tsconfig);
     const testTsConfigPath = path.resolve(projectRoot, appConfig.root, appConfig.testTsconfig);
     let pluginOptions = { tsConfigPath };
@@ -83,8 +83,15 @@ exports.getAotConfig = function (wco) {
         }
         pluginOptions.exclude = exclude;
     }
+    let boLoader = [];
+    if (buildOptions.buildOptimizer) {
+        boLoader = [{
+                loader: '@angular-devkit/build-optimizer/webpack-loader',
+                options: { sourceMap: buildOptions.sourcemaps }
+            }];
+    }
     return {
-        module: { rules: [{ test: /\.ts$/, loader: webpackLoader }] },
+        module: { rules: [{ test: /\.ts$/, use: [...boLoader, webpackLoader] }] },
         plugins: [_createAotPlugin(wco, pluginOptions)]
     };
 };

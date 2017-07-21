@@ -75,23 +75,18 @@ exports.default = Task.extend({
         blueprintOpts.blueprint = normalizeBlueprint(blueprintOpts.blueprint);
         return installBlueprint.run(blueprintOpts)
             .then(function () {
+            if (!commandOptions.skipInstall) {
+                return check_package_manager_1.checkYarnOrCNPM().then(() => npmInstall.run());
+            }
+        })
+            .then(function () {
             if (commandOptions.skipGit === false) {
                 return gitInit.run(commandOptions, rawArgs);
             }
         })
             .then(function () {
-            if (!commandOptions.skipInstall) {
-                return npmInstall.run();
-            }
-        })
-            .then(function () {
             if (commandOptions.linkCli) {
                 return linkCli.run();
-            }
-        })
-            .then(() => {
-            if (!commandOptions.skipInstall || commandOptions.linkCli) {
-                return check_package_manager_1.checkYarnOrCNPM();
             }
         })
             .then(() => {
