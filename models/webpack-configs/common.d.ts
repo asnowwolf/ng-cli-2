@@ -42,10 +42,10 @@ export declare function getCommonConfig(wco: WebpackConfigOptions): {
             exclude: string[];
         } | {
             test: RegExp;
-            loader: string;
+            loaders: string[];
         } | {
             test: RegExp;
-            loaders: string[];
+            loader: string;
         })[];
     };
     plugins: webpack.NoEmitOnErrorsPlugin[];

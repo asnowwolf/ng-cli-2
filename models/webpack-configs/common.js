@@ -85,7 +85,7 @@ function getCommonConfig(wco) {
         context: __dirname,
         entry: entryPoints,
         output: {
-            path: path.resolve(projectRoot, buildOptions.outputPath),
+            path: path.resolve(buildOptions.outputPath),
             publicPath: buildOptions.deployUrl,
             filename: `[name]${hashFormat.chunk}.bundle.js`,
             chunkFilename: `[id]${hashFormat.chunk}.chunk.js`
@@ -93,12 +93,11 @@ function getCommonConfig(wco) {
         module: {
             rules: [
                 { enforce: 'pre', test: /\.js$/, loader: 'source-map-loader', exclude: [nodeModules] },
-                { test: /\.json$/, loader: 'json-loader' },
                 { test: /\.html$/, loaders: ['html-loader', 'markup-inline-loader'] },
                 { test: /\.md$/, loaders: ['html-loader', 'markup-inline-loader', 'markdown-loader'] },
-                { test: /\.(eot|svg)$/, loader: `url-loader?name=images/[name]${hashFormat.file}.[ext]&limit=256` },
+                { test: /\.(eot|svg|cur)$/, loader: `url-loader?name=images/[name]${hashFormat.file}.[ext]&limit=256` },
                 {
-                    test: /\.(jpg|png|webp|gif|otf|ttf|woff|woff2|cur|ani)$/,
+                    test: /\.(jpg|png|webp|gif|otf|ttf|woff|woff2|ani)$/,
                     loader: `url-loader?name=images/[name]${hashFormat.file}.[ext]&limit=1024`
                 }
             ].concat(extraRules)
