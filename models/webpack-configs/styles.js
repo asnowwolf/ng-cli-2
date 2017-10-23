@@ -8,6 +8,7 @@ const cssnano = require('cssnano');
 const postcssUrl = require('postcss-url');
 const autoprefixer = require('autoprefixer');
 const ExtractTextPlugin = require('extract-text-webpack-plugin');
+const customProperties = require('postcss-custom-properties');
 /**
  * Enumerate loaders and their dependencies from this file to let the dependency validator
  * know they are used.
@@ -32,7 +33,7 @@ function getStylesConfig(wco) {
     // style-loader does not support sourcemaps without absolute publicPath, so it's
     // better to disable them when not extracting css
     // https://github.com/webpack-contrib/style-loader#recommended-configuration
-    const cssSourceMap = buildOptions.sourcemaps;
+    const cssSourceMap = buildOptions.extractCss && buildOptions.sourcemaps;
     // Minify/optimize css in production.
     const minimizeCss = buildOptions.target === 'production';
     // Convert absolute resource URLs to account for base-href and deploy-url.
@@ -71,13 +72,15 @@ function getStylesConfig(wco) {
                 }
             }),
             autoprefixer(),
+            customProperties({ preserve: true })
         ].concat(minimizeCss ? [cssnano(minimizeOptions)] : []);
     };
     postcssPluginCreator[eject_1.postcssArgs] = {
         variableImports: {
             'autoprefixer': 'autoprefixer',
             'postcss-url': 'postcssUrl',
-            'cssnano': 'cssnano'
+            'cssnano': 'cssnano',
+            'postcss-custom-properties': 'customProperties'
         },
         variables: { minimizeCss, baseHref, deployUrl }
     };
@@ -85,10 +88,14 @@ function getStylesConfig(wco) {
     const hashFormat = utils_1.getOutputHashFormat(buildOptions.outputHashing);
     // use includePaths from appConfig
     const includePaths = [];
+    let lessPathOptions;
     if (appConfig.stylePreprocessorOptions
         && appConfig.stylePreprocessorOptions.includePaths
         && appConfig.stylePreprocessorOptions.includePaths.length > 0) {
         appConfig.stylePreprocessorOptions.includePaths.forEach((includePath) => includePaths.push(path.resolve(appRoot, includePath)));
+        lessPathOptions = {
+            paths: includePaths,
+        };
     }
     // process global styles
     if (appConfig.styles.length > 0) {
@@ -115,10 +122,7 @@ function getStylesConfig(wco) {
         },
         { test: /\.less$/, use: [{
                     loader: 'less-loader',
-                    options: {
-                        sourceMap: cssSourceMap,
-                        paths: includePaths
-                    }
+                    options: Object.assign({ sourceMap: cssSourceMap }, lessPathOptions)
                 }]
         },
         {

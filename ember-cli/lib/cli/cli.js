@@ -1,14 +1,8 @@
 'use strict';
 
-const RSVP = require('rsvp');
-
 const lookupCommand = require('./lookup-command');
 const getOptionArgs = require('../utilities/get-option-args');
-let logger = require('heimdalljs-logger')('ember-cli:cli');
-let loggerTesting = require('heimdalljs-logger')('ember-cli:testing');
-const heimdall = require('heimdalljs');
 
-const Promise = RSVP.Promise;
 // Disabled until e2e and serve command can be evaluated/corrected -- require('../utilities/will-interrupt-process');
 const onProcessInterrupt = { addHandler: (_handler) => { }, removeHandler: (_handler) => { } };
 
@@ -73,8 +67,6 @@ class CLI {
       stopAndReport: (...args) => { },
       start: (...args) => { },
     };
-
-    logger.info('testing %o', !!this.testing);
   }
 
   /**
@@ -86,7 +78,7 @@ class CLI {
   run(environment) {
     let shutdownOnExit = null;
 
-    return RSVP.hash(environment).then(environment => {
+    return Promise.resolve().then(() => {
       let args = environment.cliArgs.slice();
 
       if (args.length === 0) {
@@ -106,8 +98,6 @@ class CLI {
       let commandArgs = args;
       let helpOptions;
 
-      let commandLookupCreationtoken = heimdall.start('lookup-command');
-
       let CurrentCommand = lookupCommand(environment.commands, commandName, commandArgs, {
         project: environment.project,
         ui: this.ui,
@@ -124,13 +114,9 @@ class CLI {
         cli: this,
       });
 
-      commandLookupCreationtoken.stop();
-
       getOptionArgs('--verbose', commandArgs).forEach(arg => {
         process.env[`EMBER_VERBOSE_${arg.toUpperCase()}`] = 'true';
       });
-
-      logger.info('command: %s', commandName);
 
       if (!this.testing) {
         let skipInstallationCheck = commandArgs.indexOf('--skip-installation-check') !== -1;
@@ -147,13 +133,10 @@ class CLI {
         instrumentation.stopAndReport('init');
         instrumentation.start('command');
 
-        loggerTesting.info('cli: command.beforeRun');
         onProcessInterrupt.addHandler(onCommandInterrupt);
 
         return command.beforeRun(commandArgs);
       }).then(() => {
-        loggerTesting.info('cli: command.validateAndRun');
-
         return command.validateAndRun(commandArgs);
       }).then(result => {
         instrumentation.stopAndReport('command', commandName, commandArgs);
@@ -161,11 +144,6 @@ class CLI {
         onProcessInterrupt.removeHandler(onCommandInterrupt);
 
         return result;
-      }).finally(() => {
-        instrumentation.start('shutdown');
-        shutdownOnExit = function() {
-          instrumentation.stopAndReport('shutdown');
-        };
       }).then(result => {
         // if the help option was passed, call the help command
         if (result === 'callHelp') {
@@ -180,7 +158,6 @@ class CLI {
 
         return result;
       }).then(exitCode => {
-        loggerTesting.info(`cli: command run complete. exitCode: ${exitCode}`);
         // TODO: fix this
         // Possibly this issue: https://github.com/joyent/node/issues/8329
         // Wait to resolve promise when running on windows.
@@ -200,11 +177,6 @@ class CLI {
           .then(() => runPromise);
 
       return runPromise;
-    })
-    .finally(() => {
-      if (shutdownOnExit) {
-        shutdownOnExit();
-      }
     })
     .catch(this.logError.bind(this));
   }

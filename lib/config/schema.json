@@ -33,6 +33,11 @@
             "type": "string",
             "description": "Name of the app."
           },
+          "appRoot": {
+            "type": "string",
+            "description": "Directory where app files are placed.",
+            "default": "app"
+          },
           "root": {
             "type": "string",
             "description": "The root directory of the app."
@@ -536,6 +541,23 @@
               "type": "string"
             }
           }
+        },
+        "schematics": {
+          "description": "Properties about schematics.",
+          "type": "object",
+          "properties": {
+            "collection": {
+              "description": "The schematics collection to use.",
+              "type": "string",
+              "default": "@schematics/angular"
+            },
+            "newApp": {
+              "description": "The new app schematic.",
+              "type": "string",
+              "default": "application"
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false
@@ -567,6 +589,11 @@
         },
         "versionMismatch": {
           "description": "Show a warning when the global version is newer than the local one.",
+          "type": "boolean",
+          "default": true
+        },
+        "typescriptMismatch": {
+          "description": "Show a warning when the TypeScript version is incompatible",
           "type": "boolean",
           "default": true
         }

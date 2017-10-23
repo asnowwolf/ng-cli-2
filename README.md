@@ -13,7 +13,7 @@
 [![npm](https://img.shields.io/npm/dm/@angular/cli.svg)][npm-badge-url]
 
 [![Join the chat at https://gitter.im/angular/angular-cli](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/angular/angular-cli?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Caretaker](https://img.shields.io/badge/caretaker-hansl-blue.svg)](https://github.com/brocco)
+[![Caretaker](https://img.shields.io/badge/caretaker-filipesilva-blue.svg)](https://github.com/filipesilva)
 
 [![GitHub forks](https://img.shields.io/github/forks/angular/angular-cli.svg?style=social&label=Fork)](https://github.com/angular/angular-cli/fork)
 [![GitHub stars](https://img.shields.io/github/stars/angular/angular-cli.svg?style=social&label=Star)](https://github.com/angular/angular-cli)
@@ -21,7 +21,6 @@
 
 ## Note
 
-The CLI is now in 1.0.
 If you are updating from a beta or RC version, check out our [1.0 Update Guide](https://github.com/angular/angular-cli/wiki/stories-1.0-update).
 
 If you wish to collaborate, check out [our issue list](https://github.com/angular/angular-cli/issues).
@@ -129,6 +128,7 @@ Global package:
 ```bash
 npm uninstall -g @angular/cli
 npm cache clean
+# if npm version is > 5 then use `npm cache verify` to avoid errors (or to avoid using --force)
 npm install -g @angular/cli@latest
 ```
 

@@ -9,6 +9,7 @@ const webpack_config_1 = require("../models/webpack-config");
 const config_1 = require("../models/config");
 const webpack_1 = require("@ngtools/webpack");
 const chalk_1 = require("chalk");
+const license_webpack_plugin_1 = require("license-webpack-plugin");
 const denodeify = require("denodeify");
 const common_tags_1 = require("common-tags");
 const exists = (p) => Promise.resolve(fs.existsSync(p));
@@ -16,9 +17,11 @@ const writeFile = denodeify(fs.writeFile);
 const angularCliPlugins = require('../plugins/webpack');
 const ExtractTextPlugin = require('extract-text-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const SubresourceIntegrityPlugin = require('webpack-subresource-integrity');
 const SilentError = require('silent-error');
-const licensePlugin = require('license-webpack-plugin');
 const CircularDependencyPlugin = require('circular-dependency-plugin');
+const ConcatPlugin = require('webpack-concat-plugin');
+const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
 const Task = require('../ember-cli/lib/models/task');
 const ProgressPlugin = require('webpack/lib/ProgressPlugin');
 exports.pluginArgs = Symbol('plugin-args');
@@ -69,6 +72,9 @@ class JsonWebpackSerializer {
             globOptions: this._globReplacer(globOptions)
         };
     }
+    _insertConcatAssetsWebpackPluginSerialize(value) {
+        return value.entryNames;
+    }
     _commonsChunkPluginSerialize(value) {
         let minChunks = value.minChunks;
         switch (typeof minChunks) {
@@ -96,7 +102,7 @@ class JsonWebpackSerializer {
         const basePath = path.dirname(tsConfigPath);
         return Object.assign({}, value.options, {
             tsConfigPath,
-            mainPath: path.relative(value.basePath, value.options.mainPath),
+            mainPath: path.relative(basePath, value.options.mainPath),
             hostReplacementPaths: Object.keys(value.options.hostReplacementPaths)
                 .reduce((acc, key) => {
                 const replacementPath = value.options.hostReplacementPaths[key];
@@ -106,7 +112,7 @@ class JsonWebpackSerializer {
             }, {}),
             exclude: Array.isArray(value.options.exclude)
                 ? value.options.exclude.map((p) => {
-                    return p.startsWith('/') ? path.relative(value.basePath, p) : p;
+                    return p.startsWith('/') ? path.relative(basePath, p) : p;
                 })
                 : value.options.exclude
         });
@@ -124,13 +130,24 @@ class JsonWebpackSerializer {
         return plugin.defaultValues;
     }
     _licenseWebpackPlugin(plugin) {
-        return {
-            'pattern': plugin.pattern
-        };
+        return plugin.options;
+    }
+    _concatPlugin(plugin) {
+        const options = plugin.settings;
+        if (!options || !options.filesToConcat) {
+            return options;
+        }
+        const filesToConcat = options.filesToConcat
+            .map((file) => path.relative(process.cwd(), file));
+        return Object.assign({}, options, { filesToConcat });
+    }
+    _uglifyjsPlugin(plugin) {
+        return plugin.options;
     }
     _pluginsReplacer(plugins) {
         return plugins.map(plugin => {
             let args = plugin.options || undefined;
+            const serializer = (args) => JSON.stringify(args, (k, v) => this._replacer(k, v), 2);
             switch (plugin.constructor) {
                 case ProgressPlugin:
                     this.variableImports['webpack/lib/ProgressPlugin'] = 'ProgressPlugin';
@@ -162,6 +179,10 @@ class JsonWebpackSerializer {
                     args = this._globCopyWebpackPluginSerialize(plugin);
                     this._addImport('@angular/cli/plugins/webpack', 'GlobCopyWebpackPlugin');
                     break;
+                case angularCliPlugins.InsertConcatAssetsWebpackPlugin:
+                    args = this._insertConcatAssetsWebpackPluginSerialize(plugin);
+                    this._addImport('@angular/cli/plugins/webpack', 'InsertConcatAssetsWebpackPlugin');
+                    break;
                 case webpack.optimize.CommonsChunkPlugin:
                     args = this._commonsChunkPluginSerialize(plugin);
                     this._addImport('webpack.optimize', 'CommonsChunkPlugin');
@@ -177,6 +198,10 @@ class JsonWebpackSerializer {
                     args = this._aotPluginSerialize(plugin);
                     this._addImport('@ngtools/webpack', 'AotPlugin');
                     break;
+                case webpack_1.AngularCompilerPlugin:
+                    args = this._aotPluginSerialize(plugin);
+                    this._addImport('@ngtools/webpack', 'AngularCompilerPlugin');
+                    break;
                 case HtmlWebpackPlugin:
                     args = this._htmlWebpackPlugin(plugin);
                     this.variableImports['html-webpack-plugin'] = 'HtmlWebpackPlugin';
@@ -185,16 +210,42 @@ class JsonWebpackSerializer {
                     args = this._environmentPlugin(plugin);
                     this._addImport('webpack', 'EnvironmentPlugin');
                     break;
-                case licensePlugin:
+                case license_webpack_plugin_1.LicenseWebpackPlugin:
                     args = this._licenseWebpackPlugin(plugin);
-                    this.variableImports['license-webpack-plugin'] = 'licensePlugin';
+                    this._addImport('license-webpack-plugin', 'LicenseWebpackPlugin');
+                    break;
+                case ConcatPlugin:
+                    args = this._concatPlugin(plugin);
+                    this.variableImports['webpack-concat-plugin'] = 'ConcatPlugin';
+                    break;
+                case UglifyJSPlugin:
+                    args = this._uglifyjsPlugin(plugin);
+                    this.variableImports['uglifyjs-webpack-plugin'] = 'UglifyJsPlugin';
+                    break;
+                case SubresourceIntegrityPlugin:
+                    this.variableImports['webpack-subresource-integrity'] = 'SubresourceIntegrityPlugin';
+                    break;
                 default:
                     if (plugin.constructor.name == 'AngularServiceWorkerPlugin') {
                         this._addImport('@angular/service-worker/build/webpack', plugin.constructor.name);
                     }
+                    else if (plugin['copyWebpackPluginPatterns']) {
+                        // CopyWebpackPlugin doesn't have a constructor nor save args.
+                        this.variableImports['copy-webpack-plugin'] = 'CopyWebpackPlugin';
+                        const patternOptions = plugin['copyWebpackPluginPatterns'].map((pattern) => {
+                            if (!pattern.context) {
+                                return pattern;
+                            }
+                            const context = path.relative(process.cwd(), pattern.context);
+                            return Object.assign({}, pattern, { context });
+                        });
+                        const patternsSerialized = serializer(patternOptions);
+                        const optionsSerialized = serializer(plugin['copyWebpackPluginOptions']) || 'undefined';
+                        return `\uFF02CopyWebpackPlugin(${patternsSerialized}, ${optionsSerialized})\uFF02`;
+                    }
                     break;
             }
-            const argsSerialized = JSON.stringify(args, (k, v) => this._replacer(k, v), 2) || '';
+            const argsSerialized = serializer(args) || '';
             return `\uFF02${plugin.constructor.name}(${argsSerialized})\uFF02`;
         });
     }
@@ -460,13 +511,15 @@ exports.default = Task.extend({
                 'postcss-url',
                 'raw-loader',
                 'sass-loader',
-                'script-loader',
                 'source-map-loader',
                 'istanbul-instrumenter-loader',
                 'style-loader',
                 'stylus-loader',
                 'url-loader',
                 'circular-dependency-plugin',
+                'webpack-concat-plugin',
+                'copy-webpack-plugin',
+                'uglifyjs-webpack-plugin',
             ].forEach((packageName) => {
                 packageJson['devDependencies'][packageName] = ourPackageJson['dependencies'][packageName];
             });

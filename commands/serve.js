@@ -80,6 +80,11 @@ exports.baseServeCommandOptions = override_options_1.overrideOptions([
         description: 'Don\'t verify connected clients are part of allowed hosts.',
     },
     {
+        name: 'serve-path',
+        type: String,
+        description: 'The pathname where the app will be served.'
+    },
+    {
         name: 'hmr',
         type: Boolean,
         default: false,
@@ -99,11 +104,15 @@ const ServeCommand = Command.extend({
     availableOptions: exports.baseServeCommandOptions,
     run: function (commandOptions) {
         const ServeTask = require('../tasks/serve').default;
+        // Check Angular and TypeScript versions.
         version_1.Version.assertAngularVersionIs2_3_1OrHigher(this.project.root);
+        version_1.Version.assertTypescriptVersion(this.project.root);
         // Default vendor chunk to false when build optimizer is on.
         if (commandOptions.vendorChunk === undefined) {
             commandOptions.vendorChunk = !commandOptions.buildOptimizer;
         }
+        // Default evalSourcemaps to true for serve. This makes rebuilds faster.
+        commandOptions.evalSourcemaps = true;
         return check_port_1.checkPort(commandOptions.port, commandOptions.host, defaultPort)
             .then(port => {
             commandOptions.port = port;

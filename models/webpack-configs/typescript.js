@@ -10,6 +10,10 @@ const webpackLoader = g['angularCliIsLocal']
     : '@ngtools/webpack';
 function _createAotPlugin(wco, options) {
     const { appConfig, projectRoot, buildOptions } = wco;
+    options.compilerOptions = options.compilerOptions || {};
+    if (wco.buildOptions.preserveSymlinks) {
+        options.compilerOptions.preserveSymlinks = true;
+    }
     // Read the environment, and set it in the compiler host.
     let hostReplacementPaths = {};
     // process environment file replacement
@@ -52,26 +56,50 @@ function _createAotPlugin(wco, options) {
             [path.resolve(appRoot, sourcePath)]: path.resolve(appRoot, envFile)
         };
     }
-    return new webpack_1.AotPlugin(Object.assign({}, {
-        mainPath: path.join(projectRoot, appConfig.root, appConfig.main),
-        i18nFile: buildOptions.i18nFile,
-        i18nFormat: buildOptions.i18nFormat,
-        locale: buildOptions.locale,
-        replaceExport: appConfig.platform === 'server',
-        hostReplacementPaths,
-        // If we don't explicitely list excludes, it will default to `['**/*.spec.ts']`.
-        exclude: [],
-    }, options));
+    if (webpack_1.AngularCompilerPlugin.isSupported()) {
+        const pluginOptions = Object.assign({}, {
+            mainPath: path.join(projectRoot, appConfig.root, appConfig.main),
+            i18nInFile: buildOptions.i18nFile,
+            i18nInFormat: buildOptions.i18nFormat,
+            i18nOutFile: buildOptions.i18nOutFile,
+            i18nOutFormat: buildOptions.i18nOutFormat,
+            locale: buildOptions.locale,
+            platform: appConfig.platform === 'server' ? webpack_1.PLATFORM.Server : webpack_1.PLATFORM.Browser,
+            missingTranslation: buildOptions.missingTranslation,
+            hostReplacementPaths,
+            sourceMap: buildOptions.sourcemaps,
+            // If we don't explicitely list excludes, it will default to `['**/*.spec.ts']`.
+            exclude: [],
+            include: options.include,
+        }, options);
+        return new webpack_1.AngularCompilerPlugin(pluginOptions);
+    }
+    else {
+        const pluginOptions = Object.assign({}, {
+            mainPath: path.join(projectRoot, appConfig.root, appConfig.main),
+            i18nFile: buildOptions.i18nFile,
+            i18nFormat: buildOptions.i18nFormat,
+            locale: buildOptions.locale,
+            replaceExport: appConfig.platform === 'server',
+            missingTranslation: buildOptions.missingTranslation,
+            hostReplacementPaths,
+            sourceMap: buildOptions.sourcemaps,
+            // If we don't explicitely list excludes, it will default to `['**/*.spec.ts']`.
+            exclude: []
+        }, options);
+        return new webpack_1.AotPlugin(pluginOptions);
+    }
 }
-exports.getNonAotConfig = function (wco) {
+function getNonAotConfig(wco) {
     const { appConfig, projectRoot } = wco;
     const tsConfigPath = path.resolve(projectRoot, appConfig.root, appConfig.tsconfig);
     return {
         module: { rules: [{ test: /\.ts$/, loader: webpackLoader }] },
         plugins: [_createAotPlugin(wco, { tsConfigPath, skipCodeGeneration: true })]
     };
-};
-exports.getAotConfig = function (wco) {
+}
+exports.getNonAotConfig = getNonAotConfig;
+function getAotConfig(wco) {
     const { projectRoot, buildOptions, appConfig } = wco;
     const tsConfigPath = path.resolve(projectRoot, appConfig.root, appConfig.tsconfig);
     const testTsConfigPath = path.resolve(projectRoot, appConfig.root, appConfig.testTsconfig);
@@ -91,16 +119,24 @@ exports.getAotConfig = function (wco) {
                 options: { sourceMap: buildOptions.sourcemaps }
             }];
     }
+    const test = webpack_1.AngularCompilerPlugin.isSupported()
+        ? /(?:\.ngfactory\.js|\.ngstyle\.js|\.ts)$/
+        : /\.ts$/;
     return {
-        module: { rules: [{ test: /\.ts$/, use: [...boLoader, webpackLoader] }] },
+        module: { rules: [{ test, use: [...boLoader, webpackLoader] }] },
         plugins: [_createAotPlugin(wco, pluginOptions)]
     };
-};
-exports.getNonAotTestConfig = function (wco) {
+}
+exports.getAotConfig = getAotConfig;
+function getNonAotTestConfig(wco) {
     const { projectRoot, appConfig } = wco;
     const tsConfigPath = path.resolve(projectRoot, appConfig.root, appConfig.testTsconfig);
     const appTsConfigPath = path.resolve(projectRoot, appConfig.root, appConfig.tsconfig);
-    let pluginOptions = { tsConfigPath, skipCodeGeneration: true };
+    // Force include main and polyfills.
+    // This is needed for AngularCompilerPlugin compatibility with existing projects,
+    // since TS compilation there is stricter and tsconfig.spec.ts doesn't include them.
+    const include = [appConfig.main, appConfig.polyfills];
+    let pluginOptions = { tsConfigPath, skipCodeGeneration: true, include };
     // Fallback to correct module format on projects using a shared tsconfig.
     if (tsConfigPath === appTsConfigPath) {
         pluginOptions.compilerOptions = { module: 'commonjs' };
@@ -109,5 +145,6 @@ exports.getNonAotTestConfig = function (wco) {
         module: { rules: [{ test: /\.ts$/, loader: webpackLoader }] },
         plugins: [_createAotPlugin(wco, pluginOptions)]
     };
-};
+}
+exports.getNonAotTestConfig = getNonAotTestConfig;
 //# sourceMappingURL=/users/twer/private/gde/angular-cli/models/webpack-configs/typescript.js.map

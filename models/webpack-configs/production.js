@@ -4,12 +4,21 @@ const path = require("path");
 const webpack = require("webpack");
 const fs = require("fs");
 const semver = require("semver");
+const ts = require("typescript");
 const common_tags_1 = require("common-tags");
+const license_webpack_plugin_1 = require("license-webpack-plugin");
 const build_optimizer_1 = require("@angular-devkit/build-optimizer");
 const static_asset_1 = require("../../plugins/static-asset");
 const glob_copy_webpack_plugin_1 = require("../../plugins/glob-copy-webpack-plugin");
-const licensePlugin = require('license-webpack-plugin');
-exports.getProdConfig = function (wco) {
+const read_tsconfig_1 = require("../../utilities/read-tsconfig");
+const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
+/**
+ * license-webpack-plugin has a peer dependency on webpack-sources, list it in a comment to
+ * let the dependency validator know it is used.
+ *
+ * require('webpack-sources')
+ */
+function getProdConfig(wco) {
     const { projectRoot, buildOptions, appConfig } = wco;
     let extraPlugins = [];
     let entryPoints = {};
@@ -49,6 +58,11 @@ exports.getProdConfig = function (wco) {
         - ${workerPath}
       `);
         }
+        // CopyWebpackPlugin replaces GlobCopyWebpackPlugin, but AngularServiceWorkerPlugin depends
+        // on specific behaviour from latter.
+        // AngularServiceWorkerPlugin expects the ngsw-manifest.json to be present in the 'emit' phase
+        // but with CopyWebpackPlugin it's only there on 'after-emit'.
+        // So for now we keep it here, but if AngularServiceWorkerPlugin changes we remove it.
         extraPlugins.push(new glob_copy_webpack_plugin_1.GlobCopyWebpackPlugin({
             patterns: [
                 'ngsw-manifest.json',
@@ -73,12 +87,14 @@ exports.getProdConfig = function (wco) {
         entryPoints['sw-register'] = [registerPath];
     }
     if (buildOptions.extractLicenses) {
-        extraPlugins.push(new licensePlugin({
+        extraPlugins.push(new license_webpack_plugin_1.LicenseWebpackPlugin({
             pattern: /^(MIT|ISC|BSD.*)$/,
-            suppressErrors: true
+            suppressErrors: true,
+            perChunkOutput: false,
+            outputFilename: `3rdpartylicenses.txt`
         }));
     }
-    const uglifyCompressOptions = { screw_ie8: true, warnings: buildOptions.verbose };
+    const uglifyCompressOptions = {};
     if (buildOptions.buildOptimizer) {
         // This plugin must be before webpack.optimize.UglifyJsPlugin.
         extraPlugins.push(new build_optimizer_1.PurifyPlugin());
@@ -87,22 +103,49 @@ exports.getProdConfig = function (wco) {
         // See https://github.com/webpack/webpack/issues/2899#issuecomment-317425926.
         uglifyCompressOptions.passes = 3;
     }
+    // Read the tsconfig to determine if we should apply ES6 uglify.
+    const tsconfigPath = path.resolve(projectRoot, appConfig.root, appConfig.tsconfig);
+    const tsConfig = read_tsconfig_1.readTsconfig(tsconfigPath);
+    const supportES2015 = tsConfig.options.target !== ts.ScriptTarget.ES3
+        && tsConfig.options.target !== ts.ScriptTarget.ES5;
+    if (supportES2015) {
+        extraPlugins.push(new UglifyJSPlugin({
+            sourceMap: buildOptions.sourcemaps,
+            uglifyOptions: {
+                ecma: 6,
+                warnings: buildOptions.verbose,
+                ie8: false,
+                mangle: true,
+                compress: uglifyCompressOptions,
+                output: {
+                    ascii_only: true,
+                    comments: false
+                },
+            }
+        }));
+    }
+    else {
+        uglifyCompressOptions.screw_ie8 = true;
+        uglifyCompressOptions.warnings = buildOptions.verbose;
+        extraPlugins.push(new webpack.optimize.UglifyJsPlugin({
+            mangle: { screw_ie8: true },
+            compress: uglifyCompressOptions,
+            output: { ascii_only: true },
+            sourceMap: buildOptions.sourcemaps,
+            comments: false
+        }));
+    }
     return {
         entry: entryPoints,
-        plugins: extraPlugins.concat([
+        plugins: [
             new webpack.EnvironmentPlugin({
                 'NODE_ENV': 'production'
             }),
             new webpack.HashedModuleIdsPlugin(),
             new webpack.optimize.ModuleConcatenationPlugin(),
-            new webpack.optimize.UglifyJsPlugin({
-                mangle: { screw_ie8: true },
-                compress: uglifyCompressOptions,
-                output: { ascii_only: true },
-                sourceMap: buildOptions.sourcemaps,
-                comments: false
-            })
-        ])
+            ...extraPlugins
+        ]
     };
-};
+}
+exports.getProdConfig = getProdConfig;
 //# sourceMappingURL=/users/twer/private/gde/angular-cli/models/webpack-configs/production.js.map

@@ -11,14 +11,12 @@ const config_1 = require("../config");
  * require('istanbul-instrumenter-loader')
  *
  */
-function getTestConfig(testConfig) {
-    const configPath = config_1.CliConfig.configFilePath();
-    const projectRoot = path.dirname(configPath);
-    const appConfig = config_1.CliConfig.fromProject().config.apps[0];
+function getTestConfig(wco) {
+    const { projectRoot, buildOptions, appConfig } = wco;
     const nodeModules = path.resolve(projectRoot, 'node_modules');
     const extraRules = [];
     const extraPlugins = [];
-    if (testConfig.codeCoverage && config_1.CliConfig.fromProject()) {
+    if (buildOptions.codeCoverage && config_1.CliConfig.fromProject()) {
         const codeCoverageExclude = config_1.CliConfig.fromProject().get('test.codeCoverage.exclude');
         let exclude = [
             /\.(e2e|spec)\.ts$/,
@@ -34,12 +32,13 @@ function getTestConfig(testConfig) {
         }
         extraRules.push({
             test: /\.(js|ts)$/, loader: 'istanbul-instrumenter-loader',
+            options: { esModules: true },
             enforce: 'post',
             exclude
         });
     }
     return {
-        devtool: testConfig.sourcemaps ? 'inline-source-map' : 'eval',
+        devtool: buildOptions.sourcemaps ? 'inline-source-map' : 'eval',
         entry: {
             main: path.resolve(projectRoot, appConfig.root, appConfig.test)
         },

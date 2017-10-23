@@ -98,6 +98,11 @@ exports.baseBuildCommandOptions = [
         description: 'Locale to use for i18n.'
     },
     {
+        name: 'missing-translation',
+        type: String,
+        description: 'How to handle missing translations for i18n.'
+    },
+    {
         name: 'extract-css',
         type: Boolean,
         aliases: ['ec'],
@@ -158,9 +163,7 @@ exports.baseBuildCommandOptions = [
     {
         name: 'build-optimizer',
         type: Boolean,
-        default: false,
-        description: '(Experimental) Enables @angular-devkit/build-optimizer '
-            + 'optimizations when using `--aot`.'
+        description: 'Enables @angular-devkit/build-optimizer optimizations when using `--aot`.'
     },
     {
         name: 'named-chunks',
@@ -168,6 +171,20 @@ exports.baseBuildCommandOptions = [
         aliases: ['nc'],
         description: 'Use file name for lazy loaded chunks.',
         default: buildConfigDefaults['namedChunks']
+    },
+    {
+        name: 'subresource-integrity',
+        type: Boolean,
+        default: false,
+        aliases: ['sri'],
+        description: 'Enables the use of subresource integrity validation.'
+    },
+    {
+        name: 'bundle-dependencies',
+        type: ['none', 'all'],
+        default: 'none',
+        description: 'Available on server platform only. Which external dependencies to bundle into '
+            + 'the module. By default, all of node_modules will be kept as requires.'
     }
 ];
 const BuildCommand = Command.extend({
@@ -184,8 +201,9 @@ const BuildCommand = Command.extend({
         }
     ]),
     run: function (commandOptions) {
-        // Check angular version.
+        // Check Angular and TypeScript versions.
         version_1.Version.assertAngularVersionIs2_3_1OrHigher(this.project.root);
+        version_1.Version.assertTypescriptVersion(this.project.root);
         // Default vendor chunk to false when build optimizer is on.
         if (commandOptions.vendorChunk === undefined) {
             commandOptions.vendorChunk = !commandOptions.buildOptimizer;

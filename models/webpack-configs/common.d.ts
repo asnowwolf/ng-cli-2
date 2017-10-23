@@ -6,11 +6,8 @@ import { WebpackConfigOptions } from '../webpack-config';
  *
  * require('source-map-loader')
  * require('raw-loader')
- * require('script-loader')
  * require('html-loader')
  * require('markup-inline-loader')
- * require('markdown-loader')
- * require('json-loader')
  * require('url-loader')
  * require('file-loader')
  * require('@angular-devkit/build-optimizer')
@@ -20,6 +17,7 @@ export declare function getCommonConfig(wco: WebpackConfigOptions): {
         extensions: string[];
         modules: string[];
         symlinks: boolean;
+        alias: {};
     };
     resolveLoader: {
         modules: string[];
@@ -36,28 +34,16 @@ export declare function getCommonConfig(wco: WebpackConfigOptions): {
     };
     module: {
         rules: ({
-            enforce: string;
-            test: RegExp;
-            loader: string;
-            exclude: string[];
-        } | {
             test: RegExp;
             loaders: string[];
         } | {
             test: RegExp;
             loader: string;
+            options: {
+                name: string;
+                limit: number;
+            };
         })[];
     };
     plugins: webpack.NoEmitOnErrorsPlugin[];
-    node: {
-        fs: string;
-        global: boolean;
-        crypto: string;
-        tls: string;
-        net: string;
-        process: boolean;
-        module: boolean;
-        clearImmediate: boolean;
-        setImmediate: boolean;
-    };
 };
