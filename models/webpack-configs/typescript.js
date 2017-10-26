@@ -14,6 +14,11 @@ function _createAotPlugin(wco, options) {
     if (wco.buildOptions.preserveSymlinks) {
         options.compilerOptions.preserveSymlinks = true;
     }
+    // Forcing commonjs seems to drastically improve rebuild speeds on webpack.
+    // Dev builds on watch mode will set this option to true.
+    if (wco.buildOptions.forceTsCommonjs) {
+        options.compilerOptions.module = 'commonjs';
+    }
     // Read the environment, and set it in the compiler host.
     let hostReplacementPaths = {};
     // process environment file replacement
@@ -135,7 +140,10 @@ function getNonAotTestConfig(wco) {
     // Force include main and polyfills.
     // This is needed for AngularCompilerPlugin compatibility with existing projects,
     // since TS compilation there is stricter and tsconfig.spec.ts doesn't include them.
-    const include = [appConfig.main, appConfig.polyfills];
+    const include = [appConfig.main, appConfig.polyfills, '**/*.spec.ts'];
+    if (appConfig.test) {
+        include.push(appConfig.test);
+    }
     let pluginOptions = { tsConfigPath, skipCodeGeneration: true, include };
     // Fallback to correct module format on projects using a shared tsconfig.
     if (tsConfigPath === appTsConfigPath) {

@@ -5,9 +5,7 @@ import { WebpackConfigOptions } from '../webpack-config';
  * know they are used.
  *
  * require('source-map-loader')
- * require('raw-loader')
  * require('html-loader')
- * require('markup-inline-loader')
  * require('url-loader')
  * require('file-loader')
  * require('@angular-devkit/build-optimizer')
@@ -35,7 +33,10 @@ export declare function getCommonConfig(wco: WebpackConfigOptions): {
     module: {
         rules: ({
             test: RegExp;
-            loaders: string[];
+            loader: string;
+            options: {
+                root: string;
+            };
         } | {
             test: RegExp;
             loader: string;

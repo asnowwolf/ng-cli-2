@@ -2,13 +2,13 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs = require("fs");
 const path = require("path");
-const ts = require("typescript");
 const webpack = require("webpack");
+const chalk_1 = require("chalk");
 const app_utils_1 = require("../utilities/app-utils");
 const webpack_config_1 = require("../models/webpack-config");
 const config_1 = require("../models/config");
+const strip_bom_1 = require("../utilities/strip-bom");
 const webpack_1 = require("@ngtools/webpack");
-const chalk_1 = require("chalk");
 const license_webpack_plugin_1 = require("license-webpack-plugin");
 const denodeify = require("denodeify");
 const common_tags_1 = require("common-tags");
@@ -26,6 +26,7 @@ const Task = require('../ember-cli/lib/models/task');
 const ProgressPlugin = require('webpack/lib/ProgressPlugin');
 exports.pluginArgs = Symbol('plugin-args');
 exports.postcssArgs = Symbol('postcss-args');
+const yellow = chalk_1.default.yellow;
 const pree2eNpmScript = `webdriver-manager update --standalone false --gecko false --quiet`;
 class JsonWebpackSerializer {
     constructor(_root, _dist, _appRoot) {
@@ -453,7 +454,7 @@ exports.default = Task.extend({
                 throw new SilentError('The webpack.config.js file already exists.');
             }
         })
-            .then(() => ts.sys.readFile('package.json'))
+            .then(() => strip_bom_1.stripBom(fs.readFileSync('package.json', 'utf-8')))
             .then((packageJson) => JSON.parse(packageJson))
             .then((packageJson) => {
             const scripts = packageJson['scripts'];
@@ -525,7 +526,7 @@ exports.default = Task.extend({
             });
             return writeFile('package.json', JSON.stringify(packageJson, null, 2) + '\n');
         })
-            .then(() => JSON.parse(ts.sys.readFile(tsConfigPath)))
+            .then(() => JSON.parse(strip_bom_1.stripBom(fs.readFileSync(tsConfigPath, 'utf-8'))))
             .then((tsConfigJson) => {
             if (!tsConfigJson.exclude || force) {
                 // Make sure we now include tests.  Do not touch otherwise.
@@ -543,7 +544,7 @@ exports.default = Task.extend({
             cliConfig.save();
         })
             .then(() => {
-            console.log(chalk_1.yellow(common_tags_1.stripIndent `
+            console.log(yellow(common_tags_1.stripIndent `
           ==========================================================================================
           Ejection was successful.
 

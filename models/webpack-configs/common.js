@@ -1,13 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const CopyWebpackPlugin = require("copy-webpack-plugin");
-const path = require("path");
 const webpack = require("webpack");
-const insert_concat_assets_webpack_plugin_1 = require("../../plugins/insert-concat-assets-webpack-plugin");
+const path = require("path");
+const CopyWebpackPlugin = require("copy-webpack-plugin");
 const named_lazy_chunks_webpack_plugin_1 = require("../../plugins/named-lazy-chunks-webpack-plugin");
+const insert_concat_assets_webpack_plugin_1 = require("../../plugins/insert-concat-assets-webpack-plugin");
+const utils_1 = require("./utils");
 const is_directory_1 = require("../../utilities/is-directory");
 const require_project_module_1 = require("../../utilities/require-project-module");
-const utils_1 = require("./utils");
 const ConcatPlugin = require('webpack-concat-plugin');
 const ProgressPlugin = require('webpack/lib/ProgressPlugin');
 const CircularDependencyPlugin = require('circular-dependency-plugin');
@@ -17,9 +17,7 @@ const SilentError = require('silent-error');
  * know they are used.
  *
  * require('source-map-loader')
- * require('raw-loader')
  * require('html-loader')
- * require('markup-inline-loader')
  * require('url-loader')
  * require('file-loader')
  * require('@angular-devkit/build-optimizer')
@@ -64,7 +62,7 @@ function getCommonConfig(wco) {
                 name: script.entry,
                 // Lazy scripts don't get a hash, otherwise they can't be loaded by name.
                 fileName: `[name]${script.lazy ? '' : hash}.bundle.js`,
-                filesToConcat: script.paths,
+                filesToConcat: script.paths
             }));
         });
         // Insert all the assets created by ConcatPlugin in the right place in index.html.
@@ -101,8 +99,8 @@ function getCommonConfig(wco) {
                 to: asset.output,
                 from: {
                     glob: asset.glob,
-                    dot: true,
-                },
+                    dot: true
+                }
             };
         });
         const copyWebpackPluginOptions = { ignore: ['.gitkeep'] };
@@ -117,7 +115,7 @@ function getCommonConfig(wco) {
     }
     if (buildOptions.showCircularDependencies) {
         extraPlugins.push(new CircularDependencyPlugin({
-            exclude: /(\\|\/)node_modules(\\|\/)/,
+            exclude: /(\\|\/)node_modules(\\|\/)/
         }));
     }
     if (buildOptions.buildOptimizer) {
@@ -125,8 +123,8 @@ function getCommonConfig(wco) {
             test: /\.js$/,
             use: [{
                     loader: '@angular-devkit/build-optimizer/webpack-loader',
-                    options: { sourceMap: buildOptions.sourcemaps },
-                }],
+                    options: { sourceMap: buildOptions.sourcemaps }
+                }]
         });
     }
     if (buildOptions.namedChunks) {
@@ -141,17 +139,16 @@ function getCommonConfig(wco) {
         const rxPaths = require_project_module_1.requireProjectModule(projectRoot, rxjsPathMappingImport);
         alias = rxPaths(nodeModules);
     }
-    catch (e) {
-    }
+    catch (e) { }
     return {
         resolve: {
             extensions: ['.ts', '.js'],
             modules: ['node_modules', nodeModules],
             symlinks: !buildOptions.preserveSymlinks,
-            alias,
+            alias
         },
         resolveLoader: {
-            modules: [nodeModules, 'node_modules'],
+            modules: [nodeModules, 'node_modules']
         },
         context: __dirname,
         entry: entryPoints,
@@ -159,33 +156,38 @@ function getCommonConfig(wco) {
             path: path.resolve(buildOptions.outputPath),
             publicPath: buildOptions.deployUrl,
             filename: `[name]${hashFormat.chunk}.bundle.js`,
-            chunkFilename: `[id]${hashFormat.chunk}.chunk.js`,
+            chunkFilename: `[id]${hashFormat.chunk}.chunk.js`
         },
         module: {
             rules: [
-                { test: /\.html$/, loaders: ['html-loader', 'markup-inline-loader'] },
-                { test: /\.md$/, loaders: ['html-loader', 'markup-inline-loader', 'markdown-loader'] },
+                {
+                    test: /\.html$/,
+                    loader: 'html-loader',
+                    options: {
+                        root: appRoot,
+                    }
+                },
                 {
                     test: /\.(eot|svg|cur)$/,
                     loader: 'file-loader',
                     options: {
                         name: `[name]${hashFormat.file}.[ext]`,
-                        limit: 10000,
-                    },
+                        limit: 10000
+                    }
                 },
                 {
                     test: /\.(jpg|png|webp|gif|otf|ttf|woff|woff2|ani)$/,
                     loader: 'url-loader',
                     options: {
                         name: `[name]${hashFormat.file}.[ext]`,
-                        limit: 10000,
-                    },
-                },
-            ].concat(extraRules),
+                        limit: 10000
+                    }
+                }
+            ].concat(extraRules)
         },
         plugins: [
-            new webpack.NoEmitOnErrorsPlugin(),
-        ].concat(extraPlugins),
+            new webpack.NoEmitOnErrorsPlugin()
+        ].concat(extraPlugins)
     };
 }
 exports.getCommonConfig = getCommonConfig;
