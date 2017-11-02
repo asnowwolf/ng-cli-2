@@ -36,6 +36,7 @@ exports.default = Task.extend({
                 poll: options.poll,
                 environment: options.environment,
                 preserveSymlinks: options.preserveSymlinks,
+                forceTsCommonjs: options.forceTsCommonjs,
                 app: options.app
             };
             // Assign additional karmaConfig options to the local ngapp config
@@ -46,4 +47,4 @@ exports.default = Task.extend({
         });
     }
 });
-//# sourceMappingURL=/users/twer/private/gde/angular-cli/tasks/test.js.map
+//# sourceMappingURL=/home/asnowwolf/temp/angular-cli/tasks/test.js.map

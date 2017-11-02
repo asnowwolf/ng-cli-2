@@ -59,4 +59,4 @@ function getTestConfig(wco) {
     };
 }
 exports.getTestConfig = getTestConfig;
-//# sourceMappingURL=/users/twer/private/gde/angular-cli/models/webpack-configs/test.js.map
+//# sourceMappingURL=/home/asnowwolf/temp/angular-cli/models/webpack-configs/test.js.map

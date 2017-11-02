@@ -12,6 +12,7 @@ const app_utils_1 = require("../utilities/app-utils");
 const path = require("path");
 const Command = require('../ember-cli/lib/models/command');
 const SilentError = require('silent-error');
+const { cyan, yellow } = chalk_1.default;
 const separatorRegEx = /[\/\\]/g;
 exports.default = Command.extend({
     name: 'generate',
@@ -155,16 +156,38 @@ exports.default = Command.extend({
             schematicName
         });
     },
-    printDetailedHelp: function () {
+    printDetailedHelp: function (_options, rawArgs) {
         const engineHost = schematics_1.getEngineHost();
         const collectionName = this.getCollectionName();
         const collection = schematics_1.getCollection(collectionName);
-        const schematicNames = engineHost.listSchematics(collection);
-        this.ui.writeLine(chalk_1.cyan('Available schematics:'));
-        schematicNames.forEach(schematicName => {
-            this.ui.writeLine(chalk_1.yellow(`    ${schematicName}`));
-        });
-        this.ui.writeLine('');
+        const schematicName = rawArgs[1];
+        if (schematicName) {
+            const SchematicGetHelpOutputTask = require('../tasks/schematic-get-help-output').default;
+            const getHelpOutputTask = new SchematicGetHelpOutputTask({
+                ui: this.ui,
+                project: this.project
+            });
+            return getHelpOutputTask.run({
+                schematicName,
+                collectionName,
+                nonSchematicOptions: this.availableOptions.filter((o) => !o.hidden)
+            })
+                .then((output) => {
+                return [
+                    cyan(`ng generate ${schematicName} ${cyan('[name]')} ${cyan('<options...>')}`),
+                    ...output
+                ].join('\n');
+            });
+        }
+        else {
+            const schematicNames = engineHost.listSchematics(collection);
+            const output = [];
+            output.push(cyan('Available schematics:'));
+            schematicNames.forEach(schematicName => {
+                output.push(yellow(`    ${schematicName}`));
+            });
+            return Promise.resolve(output.join('\n'));
+        }
     }
 });
-//# sourceMappingURL=/users/twer/private/gde/angular-cli/commands/generate.js.map
+//# sourceMappingURL=/home/asnowwolf/temp/angular-cli/commands/generate.js.map

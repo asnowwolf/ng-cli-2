@@ -204,9 +204,9 @@ const BuildCommand = Command.extend({
         // Check Angular and TypeScript versions.
         version_1.Version.assertAngularVersionIs2_3_1OrHigher(this.project.root);
         version_1.Version.assertTypescriptVersion(this.project.root);
-        // Default vendor chunk to false when build optimizer is on.
-        if (commandOptions.vendorChunk === undefined) {
-            commandOptions.vendorChunk = !commandOptions.buildOptimizer;
+        // Force commonjs module format for TS on dev watch builds.
+        if (commandOptions.target === 'development' && commandOptions.watch === true) {
+            commandOptions.forceTsCommonjs = true;
         }
         const BuildTask = require('../tasks/build').default;
         const buildTask = new BuildTask({
@@ -218,4 +218,4 @@ const BuildCommand = Command.extend({
 });
 BuildCommand.overrideCore = true;
 exports.default = BuildCommand;
-//# sourceMappingURL=/users/twer/private/gde/angular-cli/commands/build.js.map
+//# sourceMappingURL=/home/asnowwolf/temp/angular-cli/commands/build.js.map

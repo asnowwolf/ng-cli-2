@@ -107,9 +107,9 @@ const ServeCommand = Command.extend({
         // Check Angular and TypeScript versions.
         version_1.Version.assertAngularVersionIs2_3_1OrHigher(this.project.root);
         version_1.Version.assertTypescriptVersion(this.project.root);
-        // Default vendor chunk to false when build optimizer is on.
-        if (commandOptions.vendorChunk === undefined) {
-            commandOptions.vendorChunk = !commandOptions.buildOptimizer;
+        // Force commonjs module format for TS on dev builds.
+        if (commandOptions.target === 'development') {
+            commandOptions.forceTsCommonjs = true;
         }
         // Default evalSourcemaps to true for serve. This makes rebuilds faster.
         commandOptions.evalSourcemaps = true;
@@ -125,4 +125,4 @@ const ServeCommand = Command.extend({
     }
 });
 exports.default = ServeCommand;
-//# sourceMappingURL=/users/twer/private/gde/angular-cli/commands/serve.js.map
+//# sourceMappingURL=/home/asnowwolf/temp/angular-cli/commands/serve.js.map

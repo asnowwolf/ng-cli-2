@@ -9,4 +9,4 @@ exports.DocTask = Task.extend({
         return opn(searchUrl, { wait: false });
     }
 });
-//# sourceMappingURL=/users/twer/private/gde/angular-cli/tasks/doc.js.map
+//# sourceMappingURL=/home/asnowwolf/temp/angular-cli/tasks/doc.js.map

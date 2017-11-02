@@ -1,6 +1,7 @@
-export interface SchematicGetOptions {
+export interface SchematicGetHelpOptions {
     collectionName: string;
     schematicName: string;
+    nonSchematicOptions: any[];
 }
 export interface SchematicAvailableOptions {
     name: string;

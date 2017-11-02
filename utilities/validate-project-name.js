@@ -35,4 +35,4 @@ function validateProjectName(projectName) {
     }
 }
 exports.validateProjectName = validateProjectName;
-//# sourceMappingURL=/users/twer/private/gde/angular-cli/utilities/validate-project-name.js.map
+//# sourceMappingURL=/home/asnowwolf/temp/angular-cli/utilities/validate-project-name.js.map

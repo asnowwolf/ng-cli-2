@@ -32,4 +32,4 @@ class XI18nWebpackConfig extends webpack_config_1.NgCliWebpackConfig {
     }
 }
 exports.XI18nWebpackConfig = XI18nWebpackConfig;
-//# sourceMappingURL=/users/twer/private/gde/angular-cli/models/webpack-xi18n-config.js.map
+//# sourceMappingURL=/home/asnowwolf/temp/angular-cli/models/webpack-xi18n-config.js.map

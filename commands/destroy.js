@@ -16,4 +16,4 @@ const DestroyCommand = Command.extend({
 });
 exports.default = DestroyCommand;
 DestroyCommand.overrideCore = true;
-//# sourceMappingURL=/users/twer/private/gde/angular-cli/commands/destroy.js.map
+//# sourceMappingURL=/home/asnowwolf/temp/angular-cli/commands/destroy.js.map

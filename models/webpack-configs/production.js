@@ -4,13 +4,13 @@ const path = require("path");
 const webpack = require("webpack");
 const fs = require("fs");
 const semver = require("semver");
-const ts = require("typescript");
 const common_tags_1 = require("common-tags");
 const license_webpack_plugin_1 = require("license-webpack-plugin");
 const build_optimizer_1 = require("@angular-devkit/build-optimizer");
 const static_asset_1 = require("../../plugins/static-asset");
 const glob_copy_webpack_plugin_1 = require("../../plugins/glob-copy-webpack-plugin");
 const read_tsconfig_1 = require("../../utilities/read-tsconfig");
+const require_project_module_1 = require("../../utilities/require-project-module");
 const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
 /**
  * license-webpack-plugin has a peer dependency on webpack-sources, list it in a comment to
@@ -20,6 +20,7 @@ const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
  */
 function getProdConfig(wco) {
     const { projectRoot, buildOptions, appConfig } = wco;
+    const projectTs = require_project_module_1.requireProjectModule(projectRoot, 'typescript');
     let extraPlugins = [];
     let entryPoints = {};
     if (appConfig.serviceWorker) {
@@ -106,35 +107,8 @@ function getProdConfig(wco) {
     // Read the tsconfig to determine if we should apply ES6 uglify.
     const tsconfigPath = path.resolve(projectRoot, appConfig.root, appConfig.tsconfig);
     const tsConfig = read_tsconfig_1.readTsconfig(tsconfigPath);
-    const supportES2015 = tsConfig.options.target !== ts.ScriptTarget.ES3
-        && tsConfig.options.target !== ts.ScriptTarget.ES5;
-    if (supportES2015) {
-        extraPlugins.push(new UglifyJSPlugin({
-            sourceMap: buildOptions.sourcemaps,
-            uglifyOptions: {
-                ecma: 6,
-                warnings: buildOptions.verbose,
-                ie8: false,
-                mangle: true,
-                compress: uglifyCompressOptions,
-                output: {
-                    ascii_only: true,
-                    comments: false
-                },
-            }
-        }));
-    }
-    else {
-        uglifyCompressOptions.screw_ie8 = true;
-        uglifyCompressOptions.warnings = buildOptions.verbose;
-        extraPlugins.push(new webpack.optimize.UglifyJsPlugin({
-            mangle: { screw_ie8: true },
-            compress: uglifyCompressOptions,
-            output: { ascii_only: true },
-            sourceMap: buildOptions.sourcemaps,
-            comments: false
-        }));
-    }
+    const supportES2015 = tsConfig.options.target !== projectTs.ScriptTarget.ES3
+        && tsConfig.options.target !== projectTs.ScriptTarget.ES5;
     return {
         entry: entryPoints,
         plugins: [
@@ -143,9 +117,23 @@ function getProdConfig(wco) {
             }),
             new webpack.HashedModuleIdsPlugin(),
             new webpack.optimize.ModuleConcatenationPlugin(),
+            new UglifyJSPlugin({
+                sourceMap: buildOptions.sourcemaps,
+                uglifyOptions: {
+                    ecma: supportES2015 ? 6 : 5,
+                    warnings: buildOptions.verbose,
+                    ie8: false,
+                    mangle: true,
+                    compress: uglifyCompressOptions,
+                    output: {
+                        ascii_only: true,
+                        comments: false
+                    },
+                }
+            }),
             ...extraPlugins
         ]
     };
 }
 exports.getProdConfig = getProdConfig;
-//# sourceMappingURL=/users/twer/private/gde/angular-cli/models/webpack-configs/production.js.map
+//# sourceMappingURL=/home/asnowwolf/temp/angular-cli/models/webpack-configs/production.js.map

@@ -33,7 +33,7 @@ function getStylesConfig(wco) {
     // style-loader does not support sourcemaps without absolute publicPath, so it's
     // better to disable them when not extracting css
     // https://github.com/webpack-contrib/style-loader#recommended-configuration
-    const cssSourceMap = buildOptions.extractCss && buildOptions.sourcemaps;
+    const cssSourceMap = buildOptions.sourcemaps;
     // Minify/optimize css in production.
     const minimizeCss = buildOptions.target === 'production';
     // Convert absolute resource URLs to account for base-href and deploy-url.
@@ -140,6 +140,7 @@ function getStylesConfig(wco) {
             loader: 'css-loader',
             options: {
                 sourceMap: cssSourceMap,
+                root: appRoot,
                 importLoaders: 1
             }
         },
@@ -174,8 +175,12 @@ function getStylesConfig(wco) {
             const ret = {
                 include: globalStylePaths,
                 test,
-                use: buildOptions.extractCss ? ExtractTextPlugin.extract(extractTextPlugin)
-                    : ['style-loader', ...extractTextPlugin.use]
+                use: buildOptions.extractCss ? ExtractTextPlugin.extract(extractTextPlugin) : [{
+                        loader: 'style-loader',
+                        options: {
+                            convertToAbsoluteUrls: cssSourceMap,
+                        },
+                    }, ...extractTextPlugin.use],
             };
             // Save the original options as arguments for eject.
             if (buildOptions.extractCss) {
@@ -197,4 +202,4 @@ function getStylesConfig(wco) {
     };
 }
 exports.getStylesConfig = getStylesConfig;
-//# sourceMappingURL=/users/twer/private/gde/angular-cli/models/webpack-configs/styles.js.map
+//# sourceMappingURL=/home/asnowwolf/temp/angular-cli/models/webpack-configs/styles.js.map

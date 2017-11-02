@@ -44,4 +44,4 @@ class InsertConcatAssetsWebpackPlugin {
     }
 }
 exports.InsertConcatAssetsWebpackPlugin = InsertConcatAssetsWebpackPlugin;
-//# sourceMappingURL=/users/twer/private/gde/angular-cli/plugins/insert-concat-assets-webpack-plugin.js.map
+//# sourceMappingURL=/home/asnowwolf/temp/angular-cli/plugins/insert-concat-assets-webpack-plugin.js.map
