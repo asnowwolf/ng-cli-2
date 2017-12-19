@@ -4,11 +4,10 @@ const webpack = require("webpack");
 const path = require("path");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 const named_lazy_chunks_webpack_plugin_1 = require("../../plugins/named-lazy-chunks-webpack-plugin");
-const insert_concat_assets_webpack_plugin_1 = require("../../plugins/insert-concat-assets-webpack-plugin");
 const utils_1 = require("./utils");
 const is_directory_1 = require("../../utilities/is-directory");
 const require_project_module_1 = require("../../utilities/require-project-module");
-const ConcatPlugin = require('webpack-concat-plugin');
+const scripts_webpack_plugin_1 = require("../../plugins/scripts-webpack-plugin");
 const ProgressPlugin = require('webpack/lib/ProgressPlugin');
 const CircularDependencyPlugin = require('circular-dependency-plugin');
 const SilentError = require('silent-error');
@@ -27,7 +26,6 @@ function getCommonConfig(wco) {
     const { projectRoot, buildOptions, appConfig } = wco;
     const appRoot = path.resolve(projectRoot, appConfig.root);
     const nodeModules = path.resolve(projectRoot, 'node_modules');
-    const projectTs = require_project_module_1.requireProjectModule(projectRoot, 'typescript');
     let extraPlugins = [];
     let extraRules = [];
     let entryPoints = {};
@@ -57,20 +55,16 @@ function getCommonConfig(wco) {
         }, []);
         // Add a new asset for each entry.
         globalScriptsByEntry.forEach((script) => {
-            const hash = hashFormat.chunk !== '' && !script.lazy ? '.[hash]' : '';
-            extraPlugins.push(new ConcatPlugin({
-                uglify: buildOptions.target === 'production' ? { sourceMapIncludeSources: true } : false,
-                sourceMap: buildOptions.sourcemaps,
+            // Lazy scripts don't get a hash, otherwise they can't be loaded by name.
+            const hash = script.lazy ? '' : hashFormat.script;
+            extraPlugins.push(new scripts_webpack_plugin_1.ScriptsWebpackPlugin({
                 name: script.entry,
-                // Lazy scripts don't get a hash, otherwise they can't be loaded by name.
-                fileName: `[name]${script.lazy ? '' : hash}.bundle.js`,
-                filesToConcat: script.paths
+                sourceMap: buildOptions.sourcemaps,
+                filename: `${script.entry}${hash}.bundle.js`,
+                scripts: script.paths,
+                basePath: projectRoot,
             }));
         });
-        // Insert all the assets created by ConcatPlugin in the right place in index.html.
-        extraPlugins.push(new insert_concat_assets_webpack_plugin_1.InsertConcatAssetsWebpackPlugin(globalScriptsByEntry
-            .filter((el) => !el.lazy)
-            .map((el) => el.entry)));
     }
     // process asset entries
     if (appConfig.assets) {
@@ -82,10 +76,25 @@ function getCommonConfig(wco) {
             asset.input = path.resolve(appRoot, asset.input || '');
             asset.output = asset.output || '';
             asset.glob = asset.glob || '';
-            // Prevent asset configurations from writing outside of the output path
+            // Prevent asset configurations from writing outside of the output path, except if the user
+            // specify a configuration flag.
+            // Also prevent writing outside the project path. That is not overridable.
             const fullOutputPath = path.resolve(buildOptions.outputPath, asset.output);
             if (!fullOutputPath.startsWith(path.resolve(buildOptions.outputPath))) {
-                const message = 'An asset cannot be written to a location outside of the output path.';
+                if (!fullOutputPath.startsWith(projectRoot)) {
+                    const message = 'An asset cannot be written to a location outside the project.';
+                    throw new SilentError(message);
+                }
+                if (!asset.allowOutsideOutDir) {
+                    const message = 'An asset cannot be written to a location outside of the output path. '
+                        + 'You can override this message by setting the `allowOutsideOutDir` '
+                        + 'property on the asset to true in the CLI configuration.';
+                    throw new SilentError(message);
+                }
+            }
+            // Prevent asset configurations from reading files outside of the project.
+            if (!asset.input.startsWith(projectRoot)) {
+                const message = 'An asset cannot be read from a location outside the project.';
                 throw new SilentError(message);
             }
             // Ensure trailing slash.
@@ -105,7 +114,7 @@ function getCommonConfig(wco) {
                 }
             };
         });
-        const copyWebpackPluginOptions = { ignore: ['.gitkeep'] };
+        const copyWebpackPluginOptions = { ignore: ['.gitkeep', '**/.DS_Store', '**/Thumbs.db'] };
         const copyWebpackPluginInstance = new CopyWebpackPlugin(copyWebpackPluginPatterns, copyWebpackPluginOptions);
         // Save options so we can use them in eject.
         copyWebpackPluginInstance['copyWebpackPluginPatterns'] = copyWebpackPluginPatterns;
@@ -132,14 +141,11 @@ function getCommonConfig(wco) {
     if (buildOptions.namedChunks) {
         extraPlugins.push(new named_lazy_chunks_webpack_plugin_1.NamedLazyChunksWebpackPlugin());
     }
-    // Read the tsconfig to determine if we should prefer ES2015 modules.
     // Load rxjs path aliases.
     // https://github.com/ReactiveX/rxjs/blob/master/doc/lettable-operators.md#build-and-treeshaking
-    const supportES2015 = wco.tsConfig.options.target !== projectTs.ScriptTarget.ES3 &&
-        wco.tsConfig.options.target !== projectTs.ScriptTarget.ES5;
     let alias = {};
     try {
-        const rxjsPathMappingImport = supportES2015
+        const rxjsPathMappingImport = wco.supportES2015
             ? 'rxjs/_esm2015/path-mapping'
             : 'rxjs/_esm5/path-mapping';
         const rxPaths = require_project_module_1.requireProjectModule(projectRoot, rxjsPathMappingImport);
@@ -176,7 +182,7 @@ function getCommonConfig(wco) {
                             },
                         },
                         'markup-inline-loader',
-                    ],
+                    ]
                 },
                 {
                     test: /\.(eot|svg|cur)$/,
@@ -202,4 +208,4 @@ function getCommonConfig(wco) {
     };
 }
 exports.getCommonConfig = getCommonConfig;
-//# sourceMappingURL=/home/asnowwolf/temp/angular-cli/models/webpack-configs/common.js.map
+//# sourceMappingURL=/users/twer/private/gde/angular-cli/models/webpack-configs/common.js.map

@@ -46,4 +46,4 @@ exports.default = Command.extend({
         return lintTask.run(Object.assign({}, commandOptions, { configs: config_1.CliConfig.fromProject().config.lint }));
     }
 });
-//# sourceMappingURL=/home/asnowwolf/temp/angular-cli/commands/lint.js.map
+//# sourceMappingURL=/users/twer/private/gde/angular-cli/commands/lint.js.map

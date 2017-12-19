@@ -6,8 +6,10 @@ const fs = require("fs-extra");
 const stringUtils = require('ember-cli-string-utils');
 function dynamicPathParser(options) {
     const projectRoot = options.project.root;
-    const sourceDir = options.appConfig.root;
-    const p = options.appConfig.appRoot === undefined ? 'app' : options.appConfig.appRoot;
+    const sourceDir = options.appConfig.root.replace(/\//g, path.sep);
+    const p = options.appConfig.appRoot === undefined
+        ? 'app'
+        : options.appConfig.appRoot.replace(/\//g, path.sep);
     const appRoot = path.join(sourceDir, p);
     const cwd = process.env.PWD;
     const rootPath = path.join(projectRoot, appRoot);
@@ -57,4 +59,4 @@ function dynamicPathParser(options) {
     return Object.assign({}, parsedPath, { appRoot, sourceDir });
 }
 exports.dynamicPathParser = dynamicPathParser;
-//# sourceMappingURL=/home/asnowwolf/temp/angular-cli/utilities/dynamic-path-parser.js.map
+//# sourceMappingURL=/users/twer/private/gde/angular-cli/utilities/dynamic-path-parser.js.map

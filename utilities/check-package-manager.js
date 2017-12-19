@@ -42,4 +42,4 @@ function checkCNPM() {
     return execPromise('cnpm --version')
         .then(() => true, () => false);
 }
-//# sourceMappingURL=/home/asnowwolf/temp/angular-cli/utilities/check-package-manager.js.map
+//# sourceMappingURL=/users/twer/private/gde/angular-cli/utilities/check-package-manager.js.map

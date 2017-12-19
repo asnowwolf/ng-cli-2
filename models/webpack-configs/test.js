@@ -38,6 +38,12 @@ function getTestConfig(wco) {
         });
     }
     return {
+        resolve: {
+            mainFields: [
+                ...(wco.supportES2015 ? ['es2015'] : []),
+                'browser', 'module', 'main'
+            ]
+        },
         devtool: buildOptions.sourcemaps ? 'inline-source-map' : 'eval',
         entry: {
             main: path.resolve(projectRoot, appConfig.root, appConfig.test)
@@ -59,4 +65,4 @@ function getTestConfig(wco) {
     };
 }
 exports.getTestConfig = getTestConfig;
-//# sourceMappingURL=/home/asnowwolf/temp/angular-cli/models/webpack-configs/test.js.map
+//# sourceMappingURL=/users/twer/private/gde/angular-cli/models/webpack-configs/test.js.map

@@ -13,6 +13,9 @@ function packageChunkSort(appConfig) {
     if (appConfig.styles) {
         utils_1.extraEntryParser(appConfig.styles, './', 'styles').forEach(pushExtraEntries);
     }
+    if (appConfig.scripts) {
+        utils_1.extraEntryParser(appConfig.scripts, './', 'scripts').forEach(pushExtraEntries);
+    }
     entryPoints.push(...['vendor', 'main']);
     function sort(left, right) {
         let leftIndex = entryPoints.indexOf(left.names[0]);
@@ -33,4 +36,4 @@ function packageChunkSort(appConfig) {
     return sort;
 }
 exports.packageChunkSort = packageChunkSort;
-//# sourceMappingURL=/home/asnowwolf/temp/angular-cli/utilities/package-chunk-sort.js.map
+//# sourceMappingURL=/users/twer/private/gde/angular-cli/utilities/package-chunk-sort.js.map
