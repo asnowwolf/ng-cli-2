@@ -124,4 +124,4 @@ const VersionCommand = Command.extend({
 });
 VersionCommand.overrideCore = true;
 exports.default = VersionCommand;
-//# sourceMappingURL=/home/asnowwolf/temp/angular-cli/commands/version.js.map
+//# sourceMappingURL=/users/twer/private/gde/angular-cli/commands/version.js.map

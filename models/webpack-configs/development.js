@@ -7,4 +7,4 @@ function getDevConfig(_wco) {
     };
 }
 exports.getDevConfig = getDevConfig;
-//# sourceMappingURL=/home/asnowwolf/temp/angular-cli/models/webpack-configs/development.js.map
+//# sourceMappingURL=/users/twer/private/gde/angular-cli/models/webpack-configs/development.js.map

@@ -14,6 +14,7 @@ exports.default = Task.extend({
         const keys = Object.keys(properties);
         const availableOptions = keys
             .map(key => (Object.assign({}, properties[key], { name: stringUtils.dasherize(key) })))
+            .filter(opt => opt.visible !== false)
             .map(opt => {
             let type;
             const schematicType = opt.type;
@@ -49,4 +50,4 @@ exports.default = Task.extend({
         return Promise.resolve(availableOptions);
     }
 });
-//# sourceMappingURL=/home/asnowwolf/temp/angular-cli/tasks/schematic-get-options.js.map
+//# sourceMappingURL=/users/twer/private/gde/angular-cli/tasks/schematic-get-options.js.map

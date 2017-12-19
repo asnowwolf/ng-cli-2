@@ -29,8 +29,8 @@ const Xi18nCommand = Command.extend({
         {
             name: 'progress',
             type: Boolean,
-            default: true,
-            description: 'Log progress to the console while running.'
+            description: 'Log progress to the console while running.',
+            default: process.stdout.isTTY === true,
         },
         {
             name: 'app',
@@ -61,4 +61,4 @@ const Xi18nCommand = Command.extend({
     }
 });
 exports.default = Xi18nCommand;
-//# sourceMappingURL=/home/asnowwolf/temp/angular-cli/commands/xi18n.js.map
+//# sourceMappingURL=/users/twer/private/gde/angular-cli/commands/xi18n.js.map

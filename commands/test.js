@@ -43,8 +43,10 @@ const TestCommand = Command.extend({
         {
             name: 'progress',
             type: Boolean,
-            default: testConfigDefaults['progress'],
-            description: 'Log progress to the console while in progress.'
+            description: 'Log progress to the console while in progress.',
+            default: typeof testConfigDefaults['progress'] !== 'undefined'
+                ? testConfigDefaults['progress']
+                : process.stdout.isTTY === true,
         },
         {
             name: 'browsers',
@@ -122,4 +124,4 @@ const TestCommand = Command.extend({
 });
 TestCommand.overrideCore = true;
 exports.default = TestCommand;
-//# sourceMappingURL=/home/asnowwolf/temp/angular-cli/commands/test.js.map
+//# sourceMappingURL=/users/twer/private/gde/angular-cli/commands/test.js.map

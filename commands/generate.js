@@ -93,8 +93,12 @@ exports.default = Command.extend({
         })
             .then((availableOptions) => {
             let anonymousOptions = [];
+            const nameOption = availableOptions.filter(opt => opt.name === 'name')[0];
+            if (nameOption) {
+                anonymousOptions = [...anonymousOptions, '<name>'];
+            }
             if (collectionName === '@schematics/angular' && schematicName === 'interface') {
-                anonymousOptions = ['<type>'];
+                anonymousOptions = [...anonymousOptions, '<type>'];
             }
             this.registerOptions({
                 anonymousOptions: anonymousOptions,
@@ -106,8 +110,13 @@ exports.default = Command.extend({
         if (rawArgs[0] === 'module' && !rawArgs[1]) {
             throw 'The `ng generate module` command requires a name to be specified.';
         }
-        const entityName = rawArgs[1];
-        commandOptions.name = stringUtils.dasherize(entityName.split(separatorRegEx).pop());
+        let entityName = rawArgs[1];
+        if (entityName) {
+            commandOptions.name = stringUtils.dasherize(entityName.split(separatorRegEx).pop());
+        }
+        else {
+            entityName = '';
+        }
         const appConfig = app_utils_1.getAppFromConfig(commandOptions.app);
         const dynamicPathOptions = {
             project: this.project,
@@ -116,14 +125,14 @@ exports.default = Command.extend({
             dryRun: commandOptions.dryRun
         };
         const parsedPath = dynamic_path_parser_1.dynamicPathParser(dynamicPathOptions);
-        commandOptions.sourceDir = appConfig.root;
-        const root = appConfig.root + path.sep;
-        commandOptions.appRoot = parsedPath.appRoot === appConfig.root ? '' :
+        commandOptions.sourceDir = parsedPath.sourceDir;
+        const root = parsedPath.sourceDir + path.sep;
+        commandOptions.appRoot = parsedPath.appRoot === parsedPath.sourceDir ? '' :
             parsedPath.appRoot.startsWith(root)
                 ? parsedPath.appRoot.substr(root.length)
                 : parsedPath.appRoot;
         commandOptions.path = parsedPath.dir.replace(separatorRegEx, '/');
-        commandOptions.path = parsedPath.dir === appConfig.root ? '' :
+        commandOptions.path = parsedPath.dir === parsedPath.sourceDir ? '' :
             parsedPath.dir.startsWith(root)
                 ? commandOptions.path.substr(root.length)
                 : commandOptions.path;
@@ -190,4 +199,4 @@ exports.default = Command.extend({
         }
     }
 });
-//# sourceMappingURL=/home/asnowwolf/temp/angular-cli/commands/generate.js.map
+//# sourceMappingURL=/users/twer/private/gde/angular-cli/commands/generate.js.map

@@ -6,4 +6,4 @@ function stripBom(data) {
     return data.replace(/^\uFEFF/, '');
 }
 exports.stripBom = stripBom;
-//# sourceMappingURL=/home/asnowwolf/temp/angular-cli/utilities/strip-bom.js.map
+//# sourceMappingURL=/users/twer/private/gde/angular-cli/utilities/strip-bom.js.map

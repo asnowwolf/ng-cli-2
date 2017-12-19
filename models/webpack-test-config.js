@@ -20,4 +20,4 @@ class WebpackTestConfig extends webpack_config_1.NgCliWebpackConfig {
     }
 }
 exports.WebpackTestConfig = WebpackTestConfig;
-//# sourceMappingURL=/home/asnowwolf/temp/angular-cli/models/webpack-test-config.js.map
+//# sourceMappingURL=/users/twer/private/gde/angular-cli/models/webpack-test-config.js.map
